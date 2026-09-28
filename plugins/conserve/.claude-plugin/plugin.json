@@ -8,14 +8,12 @@
     "./skills/bloat-detector",
     "./skills/clear-context",
     "./skills/code-quality-principles",
-    "./skills/compression-strategy",
     "./skills/context-optimization",
     "./skills/cpu-gpu-performance",
     "./skills/decisive-action",
     "./skills/elegant-code",
     "./skills/mcp-code-execution",
     "./skills/response-compression",
-    "./skills/smart-sourcing",
     "./skills/token-conservation"
   ],
   "commands": [

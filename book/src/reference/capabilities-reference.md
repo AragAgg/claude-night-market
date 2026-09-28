@@ -87,7 +87,6 @@ A workflow only runs when it is asked for. None starts implicitly.
 | `code-search` | [tome](../plugins/tome.md) | GitHub implementation search |
 | `codex-delegation` | [conjure](../plugins/conjure.md) | OpenAI Codex CLI (codex exec) integration |
 | `commit-messages` | [sanctum](../plugins/sanctum.md) | Conventional commits |
-| `compression-strategy` | [conserve](../plugins/conserve.md) | Context compression analysis and recommendations |
 | `computer-control` | [phantom](../plugins/phantom.md) | Desktop automation via Claude's vision and action API |
 | `content-sanitization` | [leyline](../plugins/leyline.md) | External content sanitization |
 | `context-optimization` | [conserve](../plugins/conserve.md) | MECW principles and 50% context rule |
@@ -108,7 +107,6 @@ A workflow only runs when it is asked for. None starts implicitly.
 | `do-issue` | [sanctum](../plugins/sanctum.md) | GitHub issue resolution workflow |
 | `doc-consolidation` | [sanctum](../plugins/sanctum.md) | Document merging |
 | `doc-generator` | [scribe](../plugins/scribe.md) | Generate and remediate documentation |
-| `doc-importer` | [scribe](../plugins/scribe.md) | Import external documents to markdown |
 | `doc-updates` | [sanctum](../plugins/sanctum.md) | Documentation maintenance |
 | `document-conversion` | [leyline](../plugins/leyline.md) | Universal document-to-markdown conversion |
 | `dora-metrics` | [minister](../plugins/minister.md) | Compute DORA delivery-performance metrics with tier classification |
@@ -120,7 +118,6 @@ A workflow only runs when it is asked for. None starts implicitly.
 | `export` | [tome](../plugins/tome.md) | Export research findings for knowledge-intake |
 | `extract` | [gauntlet](../plugins/gauntlet.md) | Analyze codebase and build a knowledge base |
 | `feature-review` | [imbue](../plugins/imbue.md) | Feature prioritization with RICE/WSJF/Kano scoring and optional research enrichment via tome (`--research`) |
-| `file-analysis` | [sanctum](../plugins/sanctum.md) | File structure analysis |
 | `friction-detector` | [abstract](../plugins/abstract.md) | Detect friction signals and graduate recurring patterns into rules |
 | `gauntlet-curate` | [gauntlet](../plugins/gauntlet.md) | Research and refresh the problem bank; surveys coverage gaps and proposes YAML-valid entries |
 | `gemini-delegation` | [conjure](../plugins/conjure.md) | Gemini CLI integration |
@@ -212,7 +209,6 @@ A workflow only runs when it is asked for. None starts implicitly.
 | `skill-library-mission` | [attune](../plugins/attune.md) | Build a project skill library via discovery, parallel authoring, and review |
 | `skills-eval` | [abstract](../plugins/abstract.md) | Skill quality assessment |
 | `slop-detector` | [scribe](../plugins/scribe.md) | Detect AI-generated content markers |
-| `smart-sourcing` | [conserve](../plugins/conserve.md) | Balance accuracy with token efficiency |
 | `spec-writing` | [spec-kit](../plugins/spec-kit.md) | Specification authoring |
 | `speckit-orchestrator` | [spec-kit](../plugins/spec-kit.md) | Workflow coordination |
 | `stack-create` | [sanctum](../plugins/sanctum.md) | Initialize a branch stack from a multi-step plan |

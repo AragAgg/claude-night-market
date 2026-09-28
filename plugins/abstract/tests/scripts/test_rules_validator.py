@@ -8,6 +8,7 @@ Feature: Rules Validation
 
 from __future__ import annotations
 
+import subprocess
 import sys
 import textwrap
 from pathlib import Path
@@ -18,6 +19,7 @@ import pytest
 sys.path.insert(0, str(Path(__file__).parent.parent.parent / "scripts"))
 
 from rules_validator import (
+    check_retired_patterns,
     evaluate_rules_directory,
     validate_content_quality,
     validate_frontmatter,
@@ -697,3 +699,74 @@ class TestRetiredPatterns:
         content = "Read at most eight files before writing. " * 5
         verdict = validate_content_quality(content)
         assert not any("rationalization" in w.lower() for w in verdict["warnings"])
+
+    @pytest.mark.parametrize(
+        "header",
+        [
+            "| Thought | Reality |",
+            "| Thought Pattern | Reality Check | Action |",
+            "| Excuse | Reality |",
+            "| Excuses | Why It's Wrong | Required Action |",
+            "| Rationalization | Counter |",
+            "| Rationalisation | Counter |",
+        ],
+    )
+    def test_every_rationalization_header_is_flagged(self, header: str) -> None:
+        """Excuse and Rationalization headers are the same shape as Thought."""
+        content = f"Do the thing.\n\n{header}\n|---|---|\n| a | b |\n" + "word " * 20
+        verdict = validate_content_quality(content)
+        assert any("rationalization" in w.lower() for w in verdict["warnings"])
+
+
+class TestSkillFileCheck:
+    """Skills copied the retired table, so the check must reach SKILL.md."""
+
+    def test_excuse_table_in_skill_file_is_flagged(self, tmp_path: Path) -> None:
+        """An `| Excuse | Reality |` table in a SKILL.md produces a finding."""
+        skill = tmp_path / "SKILL.md"
+        skill.write_text(
+            "---\nname: demo\ndescription: Demo skill.\n---\n\n# Demo\n\n"
+            "| Excuse | Reality |\n|---|---|\n| too simple | test it |\n",
+            encoding="utf-8",
+        )
+        findings = check_retired_patterns(skill)
+        assert len(findings) == 1
+        assert "SKILL.md" in findings[0]
+
+    def test_skill_file_without_table_passes(self, tmp_path: Path) -> None:
+        """A skill that states constraints plainly has no findings."""
+        skill = tmp_path / "SKILL.md"
+        skill.write_text(
+            "---\nname: demo\n---\n\nRun the tests before claiming done.\n",
+            encoding="utf-8",
+        )
+        assert check_retired_patterns(skill) == []
+
+    def test_cli_on_skill_file_exits_nonzero(self, tmp_path: Path) -> None:
+        """Passing a file path runs the retired-pattern check and fails on a hit."""
+        skill = tmp_path / "SKILL.md"
+        skill.write_text(
+            "# Demo\n\n| Excuse | Reality |\n|---|---|\n", encoding="utf-8"
+        )
+        script = Path(__file__).parent.parent.parent / "scripts" / "rules_validator.py"
+        completed = subprocess.run(
+            [sys.executable, str(script), str(skill)],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        assert completed.returncode == 1
+        assert "rationalization table" in completed.stdout.lower()
+
+    def test_cli_on_clean_skill_file_exits_zero(self, tmp_path: Path) -> None:
+        """A clean file passes through the same CLI path."""
+        skill = tmp_path / "SKILL.md"
+        skill.write_text("# Demo\n\nState the constraint.\n", encoding="utf-8")
+        script = Path(__file__).parent.parent.parent / "scripts" / "rules_validator.py"
+        completed = subprocess.run(
+            [sys.executable, str(script), str(skill)],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        assert completed.returncode == 0, completed.stdout

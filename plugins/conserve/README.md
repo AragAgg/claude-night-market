@@ -97,9 +97,9 @@ percentage points on the committed `intake_queue.jsonl` fixture.
 The `bloat-detector` skill uses three tiers of analysis,
 from heuristic-based checks to deep audits with full tooling.
 `clear-context` persists session state across context windows.
-`compression-strategy` analyzes context usage and recommends optimal
-compression strategies (clear, catchup, continuation agent, archive, and summarize,
-or delegate to subagent).
+`context-optimization` carries the compression choice in its
+`compression-strategies` module (clear and catchup, continuation agent,
+archive and summarize, or delegate to subagent).
 `response-compression` eliminates filler words, hedging language,
 and hype words, saving between 150 and 350 tokens per response.
 `action-first-output` shapes each turn so the first line is a runnable
@@ -170,7 +170,7 @@ later turns by a digest plus a retrieval handle. Fetch the original, or a
 slice, on demand with `scripts/context_retrieve.py <handle>`
 (`--grep`, `--head`, `--tail`, `--lines`). The archive survives `/clear`,
 so a continuation agent can read it by handle instead of re-running the
-command. See `skills/compression-strategy/modules/reversible-compression.md`.
+command. See `skills/context-optimization/modules/reversible-compression.md`.
 
 ### PreCompact Hook
 

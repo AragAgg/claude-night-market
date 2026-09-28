@@ -14,15 +14,19 @@ import pytest
 
 SKILLS = Path(__file__).resolve().parent.parent / "skills"
 
-REVERSIBLE = SKILLS / "compression-strategy" / "modules" / "reversible-compression.md"
+REVERSIBLE = SKILLS / "context-optimization" / "modules" / "reversible-compression.md"
 CACHE_ALIGNED = (
     SKILLS / "context-optimization" / "modules" / "cache-aligned-prefixes.md"
 )
-COMPRESSION_SKILL = SKILLS / "compression-strategy" / "SKILL.md"
+COMPRESSION_STRATEGIES = (
+    SKILLS / "context-optimization" / "modules" / "compression-strategies.md"
+)
 CONTEXT_SKILL = SKILLS / "context-optimization" / "SKILL.md"
 
 
-@pytest.mark.parametrize("module_path", [REVERSIBLE, CACHE_ALIGNED])
+@pytest.mark.parametrize(
+    "module_path", [REVERSIBLE, CACHE_ALIGNED, COMPRESSION_STRATEGIES]
+)
 def test_module_exists_with_frontmatter(module_path):
     assert module_path.is_file(), f"missing module: {module_path}"
     text = module_path.read_text(encoding="utf-8")
@@ -49,7 +53,9 @@ def test_cache_module_states_write_cost_caveat():
 @pytest.mark.parametrize(
     ("skill_path", "module_name"),
     [
-        (COMPRESSION_SKILL, "reversible-compression"),
+        (CONTEXT_SKILL, "reversible-compression"),
+        (CONTEXT_SKILL, "compression-strategies"),
+        (CONTEXT_SKILL, "log-debugging-hygiene"),
         (CONTEXT_SKILL, "cache-aligned-prefixes"),
     ],
 )

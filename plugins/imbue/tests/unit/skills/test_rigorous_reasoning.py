@@ -558,7 +558,7 @@ class TestInvariantJudgmentPatterns:
         Then it should be flagged as a potential silent invariant revision
         """
         assert "refactor" in skill_content.lower()
-        assert "Silent invariant revision" in skill_content
+        assert "silent invariant revision" in " ".join(skill_content.lower().split())
 
 
 class TestAllModulesExist:

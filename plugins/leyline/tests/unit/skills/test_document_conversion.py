@@ -4,7 +4,7 @@ Feature: Document Conversion Skill Validation
   As a plugin developer
   I want the document-conversion skill to follow ecosystem conventions
   So that the three-tier fallback pattern integrates correctly with
-  consumer plugins (knowledge-intake, papers, doc-importer)
+  consumer plugins (knowledge-intake, papers, doc-generator)
 """
 
 from __future__ import annotations
@@ -32,6 +32,7 @@ EXPECTED_MODULES = [
     "format-matrix.md",
     "fallback-tiers.md",
     "uri-construction.md",
+    "project-import.md",
 ]
 
 REQUIRED_FRONTMATTER_KEYS = [
@@ -257,3 +258,36 @@ class TestPluginRegistration:
         plugin_data = json.loads(PLUGIN_JSON.read_text())
         skills = plugin_data.get("skills", [])
         assert "./skills/document-conversion" in skills
+
+
+class TestProjectImport:
+    """Feature: Import a converted document into the project as markdown.
+
+    As a user bringing a DOCX, PPTX or PDF into the repository
+    I want the converted markdown cleaned, sanitized and written to a path
+    So that the draft is editable without conversion artifacts
+    """
+
+    @pytest.fixture
+    def import_module(self) -> str:
+        return (MODULES_DIR / "project-import.md").read_text()
+
+    @pytest.mark.bdd
+    def test_hub_routes_project_imports_to_module(self) -> None:
+        """Scenario: the hub names the module for a project import."""
+        assert "modules/project-import.md" in SKILL_FILE.read_text()
+
+    @pytest.mark.bdd
+    def test_module_states_cleanup_write_and_review_marker(
+        self, import_module: str
+    ) -> None:
+        """Scenario: cleanup, target path and garbled-section marker are stated."""
+        assert "ATX headings" in import_module
+        assert "conversion artifacts" in import_module
+        assert "<!-- REVIEW: conversion artifact -->" in import_module
+        assert "`.md` extension" in import_module
+
+    @pytest.mark.bdd
+    def test_module_has_exit_criteria(self, import_module: str) -> None:
+        """Scenario: the import has criteria checkable after the fact."""
+        assert "## Exit Criteria" in import_module

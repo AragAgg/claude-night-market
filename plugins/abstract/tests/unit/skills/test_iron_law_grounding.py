@@ -20,7 +20,14 @@ from pathlib import Path
 
 import pytest
 
-MODULE = Path(__file__).parents[3] / "shared-modules" / "iron-law-enforcement.md"
+MODULE = (
+    Path(__file__).parents[4]
+    / "imbue"
+    / "skills"
+    / "proof-of-work"
+    / "modules"
+    / "iron-law-enforcement.md"
+)
 
 
 @pytest.fixture

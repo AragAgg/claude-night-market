@@ -94,8 +94,8 @@ the advisory `Large workflow` warning, so that warning
 fires here at 15 rather than 25, unless an environment
 override or a server-side gate moves it again. The pin is written
 down so a change to the default cannot silently resize
-the four workflows this repo ships, whose agent counts
-were sized against it. The key needs Claude Code
+the workflows this repo ships, whose agent counts were
+sized against it. The key needs Claude Code
 v2.1.219 or later. Before that the effective
 guideline is `unrestricted`.
 
@@ -145,7 +145,7 @@ with no signal either way. The test is what notices.
 
 One consequence to know before you go looking: the
 docs say that when workflows are off, the bundled
-workflow commands become unavailable, and the four
+workflow commands become unavailable, and the ones
 this repo ships presumably go with them. A
 contributor whose plan has workflows off will not see
 `/pensive:unified-review` or its siblings. Turning

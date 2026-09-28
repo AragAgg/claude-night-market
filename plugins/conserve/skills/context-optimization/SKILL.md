@@ -15,6 +15,9 @@ modules:
 - modules/subagent-coordination.md
 - modules/belief-clarity.md
 - modules/cache-aligned-prefixes.md
+- modules/compression-strategies.md
+- modules/reversible-compression.md
+- modules/log-debugging-hygiene.md
 hooks:
   PreToolUse:
   - matcher: Read
@@ -112,6 +115,14 @@ def select_optimal_modules(context_situation, task_complexity):
 - **Workflow Delegation**: See `modules/subagent-coordination.md` for decomposition patterns.
 - **Context Waiting**: See `modules/context-waiting.md` for deferred loading strategies.
 - **Cache Alignment**: See `modules/cache-aligned-prefixes.md` for ordering context so provider KV caches hit (stable prefix first, volatile last).
+- **Compression Choice**: See `modules/compression-strategies.md` to pick one
+  of `/clear` and `/catchup`, a continuation agent, archive and summarize, or
+  delegation, with savings and risk.
+- **Large Tool Outputs**: See `modules/reversible-compression.md` for
+  archiving an oversized output to a retrievable handle.
+- **Pasted Logs**: See `modules/log-debugging-hygiene.md` for filtering a log
+  before any compression. `/filter-log` anchors on it.
+
 ## Troubleshooting
 
 ### Common Issues

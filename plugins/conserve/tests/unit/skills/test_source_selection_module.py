@@ -1,5 +1,5 @@
 # ruff: noqa: D101,D102,D103
-"""BDD tests for smart-sourcing skill."""
+"""BDD tests for the source-selection module of token-conservation."""
 
 from pathlib import Path
 
@@ -16,7 +16,13 @@ class TestSmartSourcingSkillStructure:
 
     @pytest.fixture
     def skill_path(self) -> Path:
-        return Path(__file__).parents[3] / "skills" / "smart-sourcing" / "SKILL.md"
+        return (
+            Path(__file__).parents[3]
+            / "skills"
+            / "token-conservation"
+            / "modules"
+            / "source-selection.md"
+        )
 
     @pytest.fixture
     def skill_content(self, skill_path: Path) -> str:
@@ -24,7 +30,7 @@ class TestSmartSourcingSkillStructure:
 
     @pytest.mark.unit
     def test_skill_file_exists(self, skill_path: Path) -> None:
-        """Given the conserve plugin, smart-sourcing skill should exist."""
+        """Given token-conservation, the source-selection module should exist."""
         assert skill_path.exists()
 
     @pytest.mark.unit

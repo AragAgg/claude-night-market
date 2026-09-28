@@ -32,6 +32,7 @@ modules:
 - modules/format-matrix.md
 - modules/fallback-tiers.md
 - modules/uri-construction.md
+- modules/project-import.md
 ---
 # Document Conversion
 
@@ -45,6 +46,8 @@ conversion logic.
 - Converting PDF, DOCX, PPTX, XLSX, HTML, or images to
   markdown for downstream processing
 - Any skill that ingests external documents
+- Importing an external document into the project as an
+  editable markdown file (see `modules/project-import.md`)
 - File format is not plain text or markdown
 
 ## When NOT To Use
@@ -155,6 +158,8 @@ Then in their workflow: "Convert the document using the
 - Format support details: `modules/format-matrix.md`
 - Per-format fallback instructions: `modules/fallback-tiers.md`
 - URI construction rules: `modules/uri-construction.md`
+- Importing a document as an editable project file (cleanup,
+  target path, review markers): `modules/project-import.md`
 
 ## Exit Criteria
 

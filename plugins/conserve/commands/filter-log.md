@@ -15,7 +15,7 @@ is reproducible and the
 test guards it.
 
 This command routes the user to the tier-1 filters documented
-in `skills/compression-strategy/modules/log-debugging-hygiene.md`
+in `skills/context-optimization/modules/log-debugging-hygiene.md`
 and stops there. Tier 3 (compression) is intentionally not the
 default path.
 
@@ -134,7 +134,7 @@ Avoid the following:
 ## References
 
 - The `log-debugging-hygiene` module under
-  `plugins/conserve/skills/compression-strategy/modules/` for
+  `plugins/conserve/skills/context-optimization/modules/` for
   the full three-tier workflow and benchmarks.
 - `plugins/conserve/tests/test_log_debugging_hygiene.py` for
   the reproducible filter-first claim.

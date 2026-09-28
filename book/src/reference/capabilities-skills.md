@@ -180,12 +180,9 @@ NO COMPLETION CLAIM WITHOUT EVIDENCE FIRST
 - `proof:iron-law-green` (TDD)
 - `proof:iron-law-refactor` (TDD)
 
-**Red Flags**:
-| Thought | Action |
-|---------|--------|
-| "This looks correct" | RUN IT |
-| "Should work" | TEST IT |
-| "Syntax valid" | FUNCTIONAL TEST |
+**Evidence constraint**: "looks correct", "should work" and "syntax
+valid" are claims that need evidence. Run the code and capture its output,
+because only a functional test shows the behavior the claim is about.
 
 ### `imbue:justify`
 Post-implementation audit for AI additive bias.
@@ -240,6 +237,12 @@ MECW principles and 50% context rule.
 - Warning: 70% utilization
 - Critical: 85% utilization
 
+Its `compression-strategies` module recommends one of clear and
+catchup, a continuation agent, archive and summarize, or delegation
+to a subagent. The `reversible-compression` and
+`log-debugging-hygiene` modules cover large tool outputs and pasted
+logs.
+
 ### `conserve:bloat-detector`
 Detection algorithms for dead code and duplication.
 
@@ -248,15 +251,6 @@ Detection algorithms for dead code and duplication.
 Detects dead code (0 references), stale files (6+ months unchanged),
 God classes (500+ lines), and documentation duplication (85%+ similar content).
 The `/bloat-scan` command uses this skill under the hood.
-
-### `conserve:compression-strategy`
-Context compression strategy recommendations.
-
-**Invocation**: `Skill(conserve:compression-strategy)`
-
-Analyzes current context usage and recommends optimal compression strategies:
-clear and catchup, continuation agent, archive and summarize, or delegate to subagent.
-Integrates with the PreCompact hook for automatic context preservation.
 
 ### `abstract:modular-skills` (includes optimization techniques)
 Modular skill architecture patterns.

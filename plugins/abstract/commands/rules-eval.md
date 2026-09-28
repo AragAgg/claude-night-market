@@ -50,6 +50,11 @@ python3 ${CLAUDE_PLUGIN_ROOT}/scripts/rules_validator.py \
   ${2:+--detailed}
 ```
 
+Given one markdown file instead of a directory, such as a `SKILL.md`,
+the validator checks only for retired patterns (a rationalization
+table) and exits 1 when it finds one. Directory mode reports the same
+hit as a warning and exits 1 only on errors.
+
 ## Related Commands
 
 - `/skills-eval` - Skill quality evaluation

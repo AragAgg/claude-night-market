@@ -29,10 +29,8 @@ skills:
 - skills/elegant-code
 - skills/mcp-code-execution
 - skills/response-compression
-- skills/smart-sourcing
 - skills/token-conservation
 - skills/agent-expenditure
-- skills/compression-strategy
 commands:
 - commands/ai-hygiene-audit.md
 - commands/bloat-scan.md

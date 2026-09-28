@@ -1,6 +1,6 @@
 # API Overview
 
-*Updated: 2026-08-21*
+*Updated: 2026-09-28*
 
 ## API Surface Summary
 
@@ -11,8 +11,8 @@ details follow in the next section.
 
 ## API Inventory
 
-The ecosystem includes 135 CLI commands, 209 modular
-skills, 56 specialized agents, and 13 Python packages
+The ecosystem includes 134 CLI commands, 206 modular
+skills, 57 specialized agents, and 13 Python packages
 with public APIs. We also maintain 58 executable hooks.
 
 | Plugin | Version | Commands | Skills | Agents | Python Package | CLI Entry |
@@ -22,7 +22,7 @@ with public APIs. We also maintain 58 executable hooks.
 | attune | 1.9.21 | 11 | 14 | 2 | No | - |
 | cartograph | 1.9.21 | 1 | 7 | 1 | No | - |
 | conjure | 1.9.21 | 0 | 11 | 0 | No | quota-tracker, usage-logger, delegator |
-| conserve | 1.9.21 | 6 | 14 | 5 | No | - |
+| conserve | 1.9.21 | 6 | 12 | 5 | No | - |
 | egregore | 1.9.21 | 5 | 4 | 2 | No | - |
 | gauntlet | 1.9.21 | 6 | 7 | 1 | Yes | - |
 | herald | 1.9.21 | 0 | 0 | 0 | No | - |
@@ -35,11 +35,11 @@ with public APIs. We also maintain 58 executable hooks.
 | parseltongue | 1.9.21 | 3 | 4 | 4 | Yes | parseltongue |
 | pensive | 1.9.21 | 14 | 15 | 6 | Yes | - |
 | phantom | 1.9.21 | 1 | 1 | 1 | Yes | - |
-| sanctum | 1.9.21 | 21 | 19 | 9 | Yes | - |
-| scribe | 1.9.21 | 9 | 12 | 5 | Yes | - |
+| sanctum | 1.9.21 | 21 | 18 | 9 | Yes | - |
+| scribe | 1.9.21 | 9 | 11 | 5 | Yes | - |
 | scry | 1.9.21 | 2 | 4 | 1 | No | - |
 | spec-kit | 1.9.21 | 11 | 3 | 3 | Yes | - |
-| tome | 1.9.21 | 4 | 9 | 5 | Yes | - |
+| tome | 1.9.21 | 4 | 10 | 6 | Yes | - |
 
 ## Plugin Details
 
@@ -190,7 +190,6 @@ Skills detect AI-generated content markers (`slop-detector`),
 learn writing styles (`style-learner`),
 generate human-quality documentation (`doc-generator`),
 convert sessions to blog posts (`session-to-post`),
-import external documents (`doc-importer`),
 write technical tutorials (`tech-tutorial`),
 and replay sessions as GIFs (`session-replay`).
 The `slop-detector` skill ships with eight modules

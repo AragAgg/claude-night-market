@@ -6,10 +6,10 @@ alwaysApply: true
 **Every new or modified SKILL.md must include an Exit Criteria
 section!**
 
-The April 2026 Karpathy-compliance audit found 125 of 183 SKILL.md
-files (68%) lacked an Exit Criteria section. This is AP-7 (Vague
-Success Criteria) at scale: a skill without exit criteria is a
-skill the model cannot tell when to stop.
+A skill without exit criteria is a skill the model cannot tell
+when to stop. That is AP-7 (Vague Success Criteria), and the
+April 2026 Karpathy-compliance audit found it in most of the
+skills shipped at the time.
 
 **Required format:**
 
@@ -43,12 +43,11 @@ Each criterion must be:
 - Slash command files (``commands/*.md``); commands have their own
   argument and output contract conventions
 
-**Backfill plan:**
+**Checking it:**
 
-The 125 existing files are tracked in issue #454. Backfill in
-batches of 10-15 skills per PR, grouped by plugin. Plugins with
-no Exit Criteria coverage today (conserve, cartograph,
-memory-palace, tome, gauntlet) are highest priority.
+`plugins/abstract/tests/test_every_skill_has_exit_criteria.py`
+fails for any `plugins/*/skills/*/SKILL.md` without the section,
+and names each file.
 
 **References:**
 
