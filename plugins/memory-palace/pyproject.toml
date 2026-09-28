@@ -191,6 +191,12 @@ follow_imports_for_stubs = true
 module = ["leyline", "leyline.*"]
 ignore_missing_imports = true
 
+# Generated beside scripts/validate_knowledge_corpus.py by
+# scripts/sync_vendored.py; scripts/ is not on mypy_path.
+[[tool.mypy.overrides]]
+module = ["_vendored_leyline_frontmatter"]
+ignore_missing_imports = true
+
 [[tool.mypy.overrides]]
 module = [
     "memory_palace.session_history",

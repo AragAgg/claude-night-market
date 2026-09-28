@@ -17,59 +17,9 @@ from typing import Any
 try:
     from leyline.sqlite_graph_base import SqliteGraphBase
 except ImportError:  # pragma: no cover -- standalone fallback
-    # Minimal inline base when leyline is not installed.
-    import sqlite3 as _sqlite3
-    from pathlib import Path as _Path
-
-    class SqliteGraphBase:  # type: ignore[no-redef]  # fallback when leyline not installed
-        """Minimal fallback for connection management."""
-
-        _schema_sql: str = ""
-        _fts_create_sql: str = ""
-        _batch_size: int = 450
-
-        def __init__(self, db_path: str | _Path) -> None:
-            """Open a SQLite connection with WAL mode and foreign keys."""
-            self._db_path = str(db_path)
-            self._conn: _sqlite3.Connection = _sqlite3.connect(self._db_path)
-            self._conn.execute("PRAGMA journal_mode=WAL")
-            self._conn.execute("PRAGMA foreign_keys=ON")
-            self._conn.row_factory = _sqlite3.Row
-            self._has_fts: bool = False
-            try:
-                self._init_schema()
-            except Exception:
-                self._conn.close()
-                raise
-
-        def _init_schema(self) -> None:
-            self._conn.executescript(self._schema_sql)
-            if self._fts_create_sql:
-                try:
-                    self._conn.executescript(self._fts_create_sql)
-                    self._has_fts = True
-                except _sqlite3.OperationalError as exc:
-                    _log.warning("FTS5 unavailable: %s", exc)
-            self._conn.commit()
-
-        def close(self) -> None:
-            """Close the database connection."""
-            self._conn.close()
-
-        def __enter__(self) -> SqliteGraphBase:  # type: ignore[override]  # simpler signature for fallback
-            """Enter context manager."""
-            return self
-
-        def __exit__(self, *exc: object) -> None:
-            """Exit context manager and close connection."""
-            self.close()
-
-        def table_names(self) -> list[str]:
-            """Return names of all tables in the database."""
-            rows = self._conn.execute(
-                "SELECT name FROM sqlite_master WHERE type='table'"
-            ).fetchall()
-            return [r["name"] for r in rows]
+    from memory_palace._vendored_leyline_sqlite_graph_base import (
+        SqliteGraphBase,
+    )
 
 
 _log = logging.getLogger(__name__)

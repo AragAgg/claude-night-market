@@ -6,29 +6,12 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-import yaml
-
 try:
     from leyline.frontmatter import parse_frontmatter as extract_frontmatter
 except ImportError:
-
-    def extract_frontmatter(content: str) -> dict | None:
-        """Extract YAML frontmatter from markdown content.
-
-        Inline fallback used when leyline is not available.
-        """
-        if not content.startswith("---"):
-            return None
-
-        try:
-            end_idx = content.index("---", 3)
-            frontmatter_str = content[3:end_idx].strip()
-            result = yaml.safe_load(frontmatter_str)
-            if isinstance(result, dict):
-                return result
-            return None
-        except (ValueError, yaml.YAMLError):
-            return None
+    from _vendored_leyline_frontmatter import (
+        parse_frontmatter as extract_frontmatter,
+    )
 
 
 # Minimum number of query entries for adequate retrieval coverage
