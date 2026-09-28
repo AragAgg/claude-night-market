@@ -1212,3 +1212,65 @@ class TestScoringIsLinearOnPunctuationFreeText:
         elapsed = time.perf_counter() - start
 
         assert elapsed < 2.0, f"scoring took {elapsed:.2f}s"
+
+
+class TestFileCountCeiling:
+    """``--max-over`` gates a directory by how many files exceed the bar.
+
+    Scoring ``plugins/`` whole would fail any edit while files sit over
+    the threshold, and the changed-file ratchet never re-scores a file
+    nobody edits, so a scorer change could push untouched files over
+    unseen. The ceiling holds the count instead.
+    """
+
+    @staticmethod
+    def _tree(tmp_path: Path, sloppy: int) -> Path:
+        slop = "This comprehensive, robust, seamless approach empowers users. " * 20
+        for index in range(sloppy):
+            (tmp_path / f"sloppy{index}.md").write_text(slop, encoding="utf-8")
+        (tmp_path / "clean.md").write_text("The parser reads one line.\n" * 20)
+        return tmp_path
+
+    def test_a_count_at_the_ceiling_passes(self, tmp_path: Path) -> None:
+        root = self._tree(tmp_path, 2)
+        assert slop_score.main([str(root), "--max-over", "2"]) == 0
+
+    def test_a_count_above_the_ceiling_fails(self, tmp_path: Path) -> None:
+        root = self._tree(tmp_path, 3)
+        assert slop_score.main([str(root), "--max-over", "2"]) == 1
+
+    def test_a_drop_passes_and_asks_for_the_ceiling_to_be_lowered(
+        self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        root = self._tree(tmp_path, 1)
+        assert slop_score.main([str(root), "--max-over", "2"]) == 0
+        assert "lower --max-over to 1" in capsys.readouterr().out
+
+    @pytest.mark.integration
+    def test_the_ci_ceiling_equals_the_plugins_count(self) -> None:
+        """A ceiling above the real count is slack nobody granted."""
+        workflow = (REPO_ROOT / ".github" / "workflows" / "slop-check.yml").read_text(
+            encoding="utf-8"
+        )
+        match = re.search(r"--max-over (\d+)[^\n]*\n?[^\n]*plugins", workflow)
+        assert match, "slop-check.yml must gate plugins/ with --max-over"
+        result = subprocess.run(
+            [
+                sys.executable,
+                str(SCRIPT),
+                "--threshold",
+                "3.0",
+                "--top",
+                "0",
+                "--max-over",
+                match.group(1),
+                "plugins",
+            ],
+            capture_output=True,
+            text=True,
+            check=False,
+            cwd=REPO_ROOT,
+        )
+        counted = re.search(r"(\d+) files over 3\.0", result.stdout)
+        assert counted, result.stdout
+        assert int(counted.group(1)) == int(match.group(1))

@@ -194,6 +194,9 @@ select = [
     "B",   # flake8-bugbear
     "C4",  # flake8-comprehensions
     "UP",  # pyupgrade
+    # A PEP 604 union without `from __future__ import annotations` raises
+    # TypeError at import on system Python 3.9, which runs every hook.
+    "FA102",  # future-required-type-annotation
     "PLC0415",  # import-outside-top-level
     "PLR0913",  # too-many-arguments (enforced ecosystem-wide, not ignored)
     # Two pydocstyle rules, selected individually rather than by taking all

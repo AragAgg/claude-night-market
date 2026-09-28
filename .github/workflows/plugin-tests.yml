@@ -31,16 +31,29 @@ name: Plugin Tests (per-plugin suites)
 # its own gate to stay in step with the directory tree, which is the
 # drift `tests/test_ci_covers_ecosystem_gates.py` exists to catch
 # elsewhere in this repository.
+#
+# A pull request runs only the suites its change can break: the plugins
+# it touches plus their direct dependents, read from
+# docs/plugin-dependencies.json by scripts/select_plugin_suites.py. A
+# change to configuration every suite reads (root conftest and pyproject,
+# plugins/conftest_shared.py, plugins/abstract/config, this file, the
+# selector itself) selects every suite, and so does every push to master.
 
 on:
   push:
     branches: [main, master]
     paths:
       - "plugins/**"
+      - "conftest.py"
+      - "pyproject.toml"
+      - "scripts/select_plugin_suites.py"
       - ".github/workflows/plugin-tests.yml"
   pull_request:
     paths:
       - "plugins/**"
+      - "conftest.py"
+      - "pyproject.toml"
+      - "scripts/select_plugin_suites.py"
       - ".github/workflows/plugin-tests.yml"
   workflow_dispatch:
 
@@ -56,23 +69,38 @@ jobs:
       plugins: ${{ steps.list.outputs.plugins }}
     steps:
       - uses: actions/checkout@v7
+        with:
+          # The pull request's base commit must be local to diff against it.
+          fetch-depth: 0
 
       - name: List plugins that have a tests directory
         id: list
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
         run: |
-          plugins=$(
-            find plugins -mindepth 2 -maxdepth 2 -type d -name tests \
-              | sed 's|^plugins/||; s|/tests$||' \
-              | sort \
-              | python3 -c 'import json,sys; print(json.dumps([l.strip() for l in sys.stdin if l.strip()]))'
-          )
+          find plugins -mindepth 2 -maxdepth 2 -type d -name tests \
+            | sed 's|^plugins/||; s|/tests$||' \
+            | sort > "${RUNNER_TEMP}/discovered.txt"
+          all=$(python3 scripts/select_plugin_suites.py < "${RUNNER_TEMP}/discovered.txt")
+          case "${EVENT_NAME}" in
+            pull_request)
+              git diff --name-only "${BASE_SHA}...HEAD" > "${RUNNER_TEMP}/changed.txt"
+              plugins=$(python3 scripts/select_plugin_suites.py \
+                --changed-files "${RUNNER_TEMP}/changed.txt" \
+                < "${RUNNER_TEMP}/discovered.txt")
+              ;;
+            *) plugins="${all}" ;;
+          esac
+          printf 'all=%s\n' "${all}" >> "${GITHUB_OUTPUT}"
           printf 'plugins=%s\n' "${plugins}" >> "${GITHUB_OUTPUT}"
-          printf 'discovered: %s\n' "${plugins}"
+          printf 'discovered: %s\nselected: %s\n' "${all}" "${plugins}"
 
       - name: Fail if discovery found nothing
         run: |
-          # An empty matrix would report success by running no jobs.
-          count=$(printf '%s' '${{ steps.list.outputs.plugins }}' | python3 -c 'import json,sys; print(len(json.load(sys.stdin)))')
+          # An empty discovery would report success by running no jobs. An
+          # empty selection is legitimate: a PR touching no plugin suite.
+          count=$(printf '%s' '${{ steps.list.outputs.all }}' | python3 -c 'import json,sys; print(len(json.load(sys.stdin)))')
           case "${count}" in
             0) printf 'no plugin test suites discovered\n' >&2; exit 1 ;;
             *) printf 'discovered %s plugin test suites\n' "${count}" ;;
@@ -81,6 +109,8 @@ jobs:
   plugin-suite:
     name: pytest ${{ matrix.plugin }}
     needs: discover
+    # GitHub rejects a matrix with no values, so skip when nothing was picked.
+    if: needs.discover.outputs.plugins != '[]'
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false

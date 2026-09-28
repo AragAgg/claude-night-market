@@ -4,7 +4,8 @@
 # Usage:
 #   ./scripts/run-plugin-typecheck.sh [plugin1] [plugin2] ...
 #   ./scripts/run-plugin-typecheck.sh --all
-#   ./scripts/run-plugin-typecheck.sh --changed (runs type checks for plugins with changes)
+#   ./scripts/run-plugin-typecheck.sh --changed (plugins with staged changes, or all
+#     of them when shared type-check configuration is staged)
 
 set -euo pipefail
 
@@ -35,6 +36,9 @@ readonly UV_PYTHON
 export UV_PYTHON
 
 readonly REQUIRED_DEPENDENCIES="uv make"
+# Staged paths that change every plugin's typecheck outcome: --changed widens
+# to all plugins when one of these is staged.
+readonly SHARED_CONFIG='^(pyproject\.toml|plugins/abstract/config/make/.*|scripts/run-plugin-typecheck\.sh)$'
 XTRACE=0
 
 FAILED_PLUGINS=()
@@ -46,7 +50,7 @@ usage() {
   printf '  -h          Show this help and exit (exit 0)\n'
   printf '  -x, -t      Enable xtrace (set -x) for debugging\n'
   printf '  --all       Type check every plugin (default when no argument is given)\n'
-  printf '  --changed   Type check only plugins with staged changes\n'
+  printf '  --changed   Type check plugins with staged changes (all when shared config is staged)\n'
   printf '  PLUGIN...   Type check the named plugins under plugins/\n'
   printf '  TYPECHECK_PYTHON (env) interpreter uv builds venvs with (default: 3.12)\n'
 }
@@ -173,20 +177,23 @@ is_plugin_dir() {
   [ -f "${dir}/.claude-plugin/plugin.json" ] || [ -f "${dir}/openpackage.yml" ]
 }
 
+run_all_plugins() {
+  local plugin_dir
+  for plugin_dir in plugins/*/; do
+    if [ -d "${plugin_dir}" ] && is_plugin_dir "${plugin_dir}"; then
+      run_plugin_typecheck "${plugin_dir}" || true
+    fi
+  done
+}
+
 # Runs from PROJECT_ROOT (main enters it in a subshell), so every plugin
 # path below is relative to the repository root.
 run_selected() {
   local plugin_dir plugin_name changed_files changed_plugins
   case "${1:-}" in
     "" | --all)
-      # Run all plugin type checking
       banner "Running Type Checks Across All Plugins"
-
-      for plugin_dir in plugins/*/; do
-        if [ -d "${plugin_dir}" ] && is_plugin_dir "${plugin_dir}"; then
-          run_plugin_typecheck "${plugin_dir}" || true
-        fi
-      done
+      run_all_plugins
       ;;
     --changed)
       # Run type checking for plugins with staged changes
@@ -202,22 +209,32 @@ run_selected() {
           ;;
       esac
 
-      # Extract unique plugin directories
-      changed_plugins=$(printf '%s\n' "${changed_files}" | grep "^plugins/" | cut -d/ -f1-2 | sort -u)
+      # The root pyproject and the shared make includes decide how mypy runs
+      # for every plugin, and the includes sit inside abstract, so a
+      # per-plugin selection would check abstract alone.
+      # A here-string, not a pipe: grep -q exits at the first match, and under
+      # pipefail the writer's SIGPIPE would turn that match into a miss.
+      if grep -qE "${SHARED_CONFIG}" <<<"${changed_files}"; then
+        log "Shared type-check configuration is staged; checking every plugin"
+        run_all_plugins
+      else
+        # grep exits 1 on no match; under pipefail that would end the script.
+        changed_plugins=$(printf '%s\n' "${changed_files}" | { grep "^plugins/" || :; } | cut -d/ -f1-2 | sort -u)
 
-      case "${changed_plugins}" in
-        "")
-          log "No plugin changes detected"
-          exit 0
-          ;;
-      esac
+        case "${changed_plugins}" in
+          "")
+            log "No plugin changes detected"
+            exit 0
+            ;;
+        esac
 
-      # Run type checking for each changed plugin
-      while IFS= read -r plugin_dir; do
-        if [ -d "${plugin_dir}" ]; then
-          run_plugin_typecheck "${plugin_dir}" || true
-        fi
-      done <<<"${changed_plugins}"
+        # Run type checking for each changed plugin
+        while IFS= read -r plugin_dir; do
+          if [ -d "${plugin_dir}" ]; then
+            run_plugin_typecheck "${plugin_dir}" || true
+          fi
+        done <<<"${changed_plugins}"
+      fi
       ;;
     *)
       # Run type checking for specified plugins

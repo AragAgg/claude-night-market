@@ -2,7 +2,8 @@ name: Type Check (strict mypy, all plugins)
 
 # Enforces strict mypy across every plugin on each PR. The local
 # pre-commit `run-plugin-typecheck` hook runs the same `make typecheck`
-# (--all) target, but only fires for people who have hooks installed and
+# target (--changed: the staged plugins, or all of them when shared config
+# is staged), but only fires for people who have hooks installed and
 # only on commit. This gate guarantees the whole monorepo is type-checked
 # before merge, so type errors stop accumulating in plugins a given change
 # did not touch.

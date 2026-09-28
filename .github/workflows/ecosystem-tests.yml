@@ -23,6 +23,11 @@ name: Ecosystem Tests (root tests/ suite)
 # reads them: every skill `modules/` file, and every project rule. Too narrow
 # a filter does not fail, it reports green by not running.
 #
+# `plugins/*/hooks/**` and `plugins/*/src/**` are here for
+# `test_hooks_import_without_project_deps.py`, which imports every registered
+# hook with pyyaml blocked. Hooks import through `src/` packages, so a change
+# in either directory can break the import chain that gate checks.
+#
 # `tests/test_ci_covers_ecosystem_gates.py` derives both sides from their
 # sources and fails if they drift apart again.
 
@@ -33,6 +38,8 @@ on:
       - "plugins/*/skills/**"
       - "plugins/*/commands/**"
       - "plugins/*/agents/**"
+      - "plugins/*/hooks/**"
+      - "plugins/*/src/**"
       - "plugins/abstract/scripts/validate_budget.py"
       - ".claude/rules/**"
       - "tests/**"
@@ -45,6 +52,8 @@ on:
       - "plugins/*/skills/**"
       - "plugins/*/commands/**"
       - "plugins/*/agents/**"
+      - "plugins/*/hooks/**"
+      - "plugins/*/src/**"
       - "plugins/abstract/scripts/validate_budget.py"
       - ".claude/rules/**"
       - "tests/**"

@@ -631,6 +631,15 @@ def main(argv: list | None = None) -> int:
             "higher than its committed version at REF"
         ),
     )
+    parser.add_argument(
+        "--max-over",
+        type=int,
+        metavar="N",
+        help=(
+            "fail only when more than N files are over the threshold. For a "
+            "tree with a known backlog: the count may fall and hold, never rise"
+        ),
+    )
     args = parser.parse_args(argv)
 
     allow = load_allowlist()
@@ -701,7 +710,12 @@ def main(argv: list | None = None) -> int:
             + ", ".join(surfaced)
         )
 
-    return 1 if over else 0
+    if args.max_over is None:
+        return 1 if over else 0
+    print(f"{len(over)} files over {args.threshold} (ceiling {args.max_over})")
+    if len(over) < args.max_over:
+        print(f"lower --max-over to {len(over)} so the drop cannot be undone")
+    return 1 if len(over) > args.max_over else 0
 
 
 if __name__ == "__main__":
