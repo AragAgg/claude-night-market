@@ -7,6 +7,87 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Vendored leyline copies** (sanctum, gauntlet, memory-palace).
+  `scripts/sync_vendored.py` generates the stdlib-only leyline modules
+  the plugins fall back on when leyline is absent, and
+  `tests/test_vendored_leyline_copies.py` fails when a copy is stale.
+  Three of the five hand-kept copies were pinned by nothing.
+- **Count ceiling for `plugins/` slop.** `slop_score.py --max-over N`
+  fails when more than N files exceed the threshold, and CI holds
+  `plugins/` at 21. The changed-file ratchet never re-scores a file no
+  one edits, so a scorer change could push untouched files over.
+- **Shell `main()` ratchet.** An executable script without `main()`
+  fails unless it is on an allowlist that can only shrink.
+
+### Changed
+
+- **Python 3.9 gate uses FA102** (CI). The UP007 step exited 0 on
+  `int | None` at py39, so it could not fail. FA102 is also in the
+  root ruff `select`, which catches the same thing at edit time.
+- **Plugin lists derive from the tree** (CI, pre-commit). One
+  `validate-plugins` hook replaces 19 per-plugin hooks that missed
+  cartograph, gauntlet, herald and oracle. The 3.9 matrix now equals
+  the set of plugins shipping Python hooks, which adds gauntlet,
+  herald, hookify, oracle, pensive and tome.
+- **PR CI runs the suites a change can affect.** `plugin-tests.yml`
+  selects changed plugins plus their dependents from
+  `docs/plugin-dependencies.json`; push to master runs all. The
+  pre-commit typecheck runs changed plugins, and all of them when
+  shared config is staged.
+- **`ServiceConfig` rejects contradictory flags at construction**
+  (conjure). Seven fixes were configs that built fine and failed at
+  argv time. `prompt_long_flag` defaults to `--prompt`.
+- **night_run stops on a failed git command** (egregore). A raising
+  `_git_query` replaces six call sites that ignored the exit code, and
+  the handoff is parsed once into a frozen `Handoff` whose required
+  keys the gate reads from its fields. A wrongly typed key is now
+  MALFORMED.
+- **scribe shares one fence and URL mask.** `scribe.markdown_spans`
+  holds `FENCED_CODE` and `URL` for spelling, negation, ste and
+  `slop_score.py`. `sanctum/commands/commit-msg.md` scores 14.43 where
+  it scored 13.41, from the stricter fence.
+- **memory-palace capture hooks share `render_frontmatter`.** Every
+  string field is written quoted, so a session id or title holding
+  `: ` or `#` no longer makes the entry unparseable.
+- **skills-eval rewards intent, constraints and exit criteria**
+  (abstract). The rubric had scored rationalization tables,
+  commitment declarations and "YOU MUST" wording as positives, which
+  `bounded-autonomy.md` retires. `rules_validator.py` takes a single
+  file and matches `Excuse` and `Rationalization` headers too.
+- Rationalization tables in rigorous-reasoning, escalation-governance
+  and four modules are rewritten as constraints with reasons.
+- Rules and docs no longer carry counts that drift: exit-criteria and
+  dispatch rules are count-free, and
+  `plugins/abstract/tests/test_doc_counts_match_plugin_json.py` pins
+  the counts in `book/src/introduction.md` and `docs/api-overview.md`.
+- conjure tests live beside the module they test, and
+  `delegation_executor.__all__` exports no private names.
+
+### Removed
+
+- `conserve:smart-sourcing`, now the `source-selection` module of
+  `conserve:token-conservation`.
+- `conserve:compression-strategy`, now modules of
+  `conserve:context-optimization`.
+- `scribe:doc-importer`, now the `project-import` module of
+  `leyline:document-conversion`.
+- `sanctum:file-analysis`, now the `structure-mapping` module of
+  `sanctum:test-updates`.
+- `plugins/abstract/shared-modules/iron-law-enforcement.md`, a drifted
+  fork of the imbue proof-of-work module; its extra section moved there.
+
+### Fixed
+
+- `to_american` rewrote spellings inside `~~~` fences.
+- `ecosystem-tests.yml` skipped PRs touching only `plugins/*/hooks/**`
+  or `plugins/*/src/**`, so the hook import guard never ran on them.
+- The `json_utils.sh` drift hook watched the wrong file for all three
+  copies, and no workflow ran the drift script.
+- `run-plugin-typecheck.sh` exited 1 when no staged file sat under
+  `plugins/`.
+
 ## [1.9.21] - 2026-09-23
 
 ### Added
