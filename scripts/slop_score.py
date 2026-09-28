@@ -44,6 +44,7 @@ _REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(_REPO_ROOT / "plugins" / "scribe" / "src"))
 
 from scribe.markdown_spans import (  # noqa: E402 - path must be set before import
+    FENCED_CODE,
     INLINE_CODE,
 )
 from scribe.negation import (  # noqa: E402 - path must be set before import
@@ -84,7 +85,7 @@ EM_DASH_WEIGHT = 1
 
 CONFIG_NAME = ".slop-config.yaml"
 
-_FENCED_CODE = re.compile(r"^```.*?^```", re.DOTALL | re.MULTILINE)
+_FENCED_CODE = FENCED_CODE
 # The pipe guards keep markdown table separators out. `slop-scan-for-docs.md`
 # rule 2a exempts `| -- |` explicitly, and the bare form matched every
 # table in the repository, which is why promoting this to the gate

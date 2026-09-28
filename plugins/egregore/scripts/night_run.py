@@ -58,6 +58,7 @@ from typing import TYPE_CHECKING, Any, Protocol
 
 if TYPE_CHECKING:  # pragma: no cover
     from budget import Budget
+    from handoff_gate import Handoff
 
 import budget as budget_mod
 import scope
@@ -189,9 +190,8 @@ class TaskResult:
 
 def _diff_line_count(runner: Runner, workdir: Path) -> int:
     """Count added and removed lines in the working tree."""
-    result = runner.run(["git", "diff", "--numstat"], cwd=workdir)
     total = 0
-    for line in result.output.splitlines():
+    for line in _git_query(runner, workdir, "diff", "--numstat").splitlines():
         parts = line.split()
         if len(parts) >= _NUMSTAT_COUNT_FIELDS:
             total += int(parts[0]) if parts[0].isdigit() else 0
@@ -201,8 +201,8 @@ def _diff_line_count(runner: Runner, workdir: Path) -> int:
 
 def _changed_files(runner: Runner, workdir: Path) -> list[str]:
     """List the tracked files the implementer modified."""
-    result = runner.run(["git", "diff", "--name-only"], cwd=workdir)
-    return [line.strip() for line in result.output.splitlines() if line.strip()]
+    names = _git_query(runner, workdir, "diff", "--name-only")
+    return [line.strip() for line in names.splitlines() if line.strip()]
 
 
 def _touched_files(runner: Runner, workdir: Path) -> list[str]:
@@ -221,14 +221,14 @@ def _touched_files(runner: Runner, workdir: Path) -> list[str]:
 
 def _dispatch_implementer(
     runner: Runner,
-    handoff: Mapping[str, Any],
+    handoff: Handoff,
     task: Mapping[str, Any],
     workdir: Path,
     steer: str,
 ) -> Completed:
     """Hand the task to a non-Anthropic provider and log whatever it says."""
-    provider = (handoff.get("implementer") or {}).get("provider", "auto")
-    timeout = int((handoff.get("budget") or {}).get("implementer_timeout_s", 900))
+    provider = handoff.implementer.get("provider", "auto")
+    timeout = int(handoff.budget.get("implementer_timeout_s", 900))
     files = [str(f) for f in task.get("files") or []]
     prompt = (
         f"Task {task.get('id')}: {task.get('title')}.\n"
@@ -275,7 +275,7 @@ def _record(
 
 def run_task(
     task: Mapping[str, Any],
-    handoff: Mapping[str, Any],
+    handoff: Handoff,
     workdir: Path,
     runner: Runner,
     *,
@@ -289,15 +289,13 @@ def run_task(
     shift respects the same rate-limit window ``watchdog.sh`` reads. A
     second cooldown file would be a second source of truth.
     """
-    limits = handoff.get("budget") or {}
-    item_scope = handoff.get("scope") or {}
+    limits = handoff.budget
+    item_scope = handoff.scope
     max_attempts = int(limits.get("max_attempts_per_task", 3))
     allow_paths: Sequence[str] = item_scope.get("allow_paths") or []
     cap = int(item_scope.get("max_diff_lines", 200))
     evidence = task.get("evidence") or {}
-    allow_fallback = bool(
-        (handoff.get("implementer") or {}).get("allow_on_plan_fallback", False)
-    )
+    allow_fallback = bool(handoff.implementer.get("allow_on_plan_fallback", False))
 
     result = TaskResult(task_id=str(task.get("id")), verdict="FAIL", reason="")
     steer = ""
@@ -366,7 +364,7 @@ def run_task(
         else:
             sitter_verdict, sitter_reason, next_instruction = babysitter(
                 task=task,
-                diff=runner.run(["git", "diff", "--unified=0"], cwd=workdir).output,
+                diff=_git_query(runner, workdir, "diff", "--unified=0"),
                 test_output=observed.output,
                 test_exit=observed.returncode,
             )
@@ -473,9 +471,35 @@ def _headers_in(text: str) -> dict[str, str]:
     return found
 
 
-def _git(runner: Runner, workdir: Path | None, *args: str) -> Completed:
-    """Run one git command as argv."""
+class GitFailed(Exception):
+    """A git command whose output the walk needed exited nonzero.
+
+    Its output is then an error message, not an answer: a failed
+    ``git diff --name-only`` handed "fatal: ..." to the scope fence as a
+    changed path, and a failed ``git status`` read as a clean tree.
+    """
+
+    def __init__(self, argv: Sequence[str], observed: Completed) -> None:
+        """Keep the command, so the proof names what failed."""
+        self.argv = list(argv)
+        self.returncode = observed.returncode
+        super().__init__(
+            f"{' '.join(self.argv)} exited {observed.returncode}: "
+            f"{observed.output[:200]}"
+        )
+
+
+def _git(runner: Runner, workdir: Path, *args: str) -> Completed:
+    """Run one git command as argv, for a caller that reads the exit code."""
     return runner.run(["git", *args], cwd=workdir)
+
+
+def _git_query(runner: Runner, workdir: Path, *args: str) -> str:
+    """Run one git command and return its output, raising ``GitFailed`` on exit."""
+    observed = _git(runner, workdir, *args)
+    if observed.returncode != 0:
+        raise GitFailed(["git", *args], observed)
+    return observed.output
 
 
 def _untracked(runner: Runner, workdir: Path) -> list[str]:
@@ -487,10 +511,10 @@ def _untracked(runner: Runner, workdir: Path) -> list[str]:
     steer message, so the implementer is told the wrong path and a
     nested allowlist entry cannot be judged at all.
     """
-    result = runner.run(["git", "status", "--porcelain", "-uall"], cwd=workdir)
+    status = _git_query(runner, workdir, "status", "--porcelain", "-uall")
     return [
         line[3:].strip()
-        for line in result.output.splitlines()
+        for line in status.splitlines()
         if line.startswith("??") and line[3:].strip()
     ]
 
@@ -543,9 +567,9 @@ def _discard_uncommitted(runner: Runner, worktree: Path) -> Discarded | None:
     if not files and not untracked:
         return None
 
-    diff = runner.run(["git", "diff"], cwd=worktree).output[-DISCARD_DIFF_CHARS:]
+    diff = _git_query(runner, worktree, "diff")[-DISCARD_DIFF_CHARS:]
     if files:
-        _git(runner, worktree, "checkout", "--", ".")
+        _git_query(runner, worktree, "checkout", "--", ".")
     return Discarded(files=files, untracked=untracked, diff=diff)
 
 
@@ -641,7 +665,7 @@ def _metered_babysitter(
 
 
 def _prepare_worktree(
-    runner: Runner, root: Path, worktree: Path, handoff: Mapping[str, Any]
+    runner: Runner, root: Path, worktree: Path, handoff: Handoff
 ) -> str | None:
     """Cut the item's worktree and run its setup command.
 
@@ -658,14 +682,14 @@ def _prepare_worktree(
         "worktree",
         "add",
         "-b",
-        str(handoff.get("branch")),
+        handoff.branch,
         str(worktree),
-        str(handoff.get("base_branch")),
+        handoff.base_branch,
     )
     if added.returncode != 0:
         return f"git worktree add exited {added.returncode}: {added.output[:200]}"
 
-    setup = (handoff.get("commands") or {}).get("setup")
+    setup = handoff.commands.get("setup")
     if not setup:
         return None
 
@@ -704,10 +728,10 @@ def _commit_task(runner: Runner, worktree: Path, task: Mapping[str, Any]) -> str
 
 
 def _final_full_suite(
-    runner: Runner, worktree: Path, handoff: Mapping[str, Any]
+    runner: Runner, worktree: Path, handoff: Handoff
 ) -> tuple[dict[str, Any], str | None]:
     """Run the item's last gate. Returns its record and any failure reason."""
-    full = (handoff.get("commands") or {}).get("full_test")
+    full = handoff.commands.get("full_test")
     if not full:
         # Recorded rather than skipped. Omitting the section made "the
         # gate passed" and "the gate was never asked to run" read
@@ -762,8 +786,22 @@ def _item_worktree(root: Path, item: str, declared: object) -> Path:
     return resolved
 
 
+def _discard_at_park(runner: Runner, worktree: Path, result: ItemResult) -> None:
+    """Discard what a stopped item left, recording a git failure as the status.
+
+    This runs outside the task loop's handler, and a raise here would
+    leave the item with no proof at all.
+    """
+    try:
+        result.discarded = _discard_uncommitted(runner, worktree)
+    except GitFailed as failed:
+        stopped = f"{result.reason}; then " if result.reason else ""
+        result.status = "git_failed"
+        result.reason = f"{stopped}discarding the parked edits failed: {failed}"
+
+
 def run_item(  # noqa: PLR0913 - budget and budget_path travel together; bundling them into a holder would be ceremony for one call site
-    handoff: Mapping[str, Any],
+    handoff: Handoff,
     tasks: Sequence[Mapping[str, Any]],
     root: Path,
     runner: Runner,
@@ -784,13 +822,13 @@ def run_item(  # noqa: PLR0913 - budget and budget_path travel together; bundlin
     already passed stay committed. A stop is not a rollback: a task with
     a proof row is reviewable work whatever happened after it.
     """
-    item = str(handoff.get("item"))
-    limits = handoff.get("budget") or {}
+    item = handoff.item
+    limits = handoff.budget
     ceiling = int(limits.get("claude_token_ceiling", 0)) or None
     result = ItemResult(item=item, status="ready")
 
     try:
-        worktree = _item_worktree(root, item, handoff.get("worktree"))
+        worktree = _item_worktree(root, item, handoff.worktree)
     except ValueError as exc:
         result.status = "setup_failed"
         result.reason = str(exc)
@@ -815,9 +853,15 @@ def run_item(  # noqa: PLR0913 - budget and budget_path travel together; bundlin
                 babysitter=_metered_babysitter(babysitter, spend, budget, ceiling),
                 budget=budget,
             )
-        except BudgetExhausted as exhausted:
-            result.status = "parked_budget"
-            result.reason = f"stopped at {tid}: {exhausted}"
+        except (BudgetExhausted, GitFailed) as stopped:
+            # A spent budget parks the item for a resume. A git failure
+            # breaks the walk, and main exits WALK_BROKEN_EXIT on it.
+            result.status = (
+                "parked_budget"
+                if isinstance(stopped, BudgetExhausted)
+                else "git_failed"
+            )
+            result.reason = f"stopped at {tid}: {stopped}"
             break
         except UsageLimited as limited:
             result.status = f"parked_{limited.kind}"
@@ -850,7 +894,7 @@ def run_item(  # noqa: PLR0913 - budget and budget_path travel together; bundlin
     result.estimated_tokens = spend[0]
 
     if result.status != "ready":
-        result.discarded = _discard_uncommitted(runner, worktree)
+        _discard_at_park(runner, worktree, result)
 
     if result.status == "ready":
         result.full_suite, red = _final_full_suite(runner, worktree, handoff)
@@ -939,7 +983,8 @@ def main(
     then nothing has run; 0 when the walk stopped somewhere the proof
     describes (every task passed, or parked on budget, usage, or a task
     that would not pass); 5 (``WALK_BROKEN_EXIT``) when the walk itself
-    broke, on worktree setup, a commit, or the final full suite.
+    broke, on worktree setup, a git command, a commit, or the final full
+    suite.
 
     ``runner`` and ``babysitter`` are injection points for tests. In
     production the babysitter is the real claude CLI, imported here and

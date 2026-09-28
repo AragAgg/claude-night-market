@@ -1,7 +1,8 @@
 """TDD tests for CJR behavioral findings.
 
 CJR-001: Model IDs must be named constants with startup validation.
-CJR-002: verify_service auth probe must narrow exception to subprocess types.
+CJR-002 (verify_service narrows its exception) is tested in
+tests/scripts/test_delegation_verify.py, next to the module it covers.
 CJR-003: load_configurations must narrow exception to json/OS types.
 CJR-004: compute_borda_scores must produce identical output after O(n²) refactor.
 CJR-007: convene() must call module-level phase functions directly.
@@ -11,10 +12,8 @@ from __future__ import annotations
 
 import ast
 import json
-import subprocess
-from dataclasses import replace
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 from scripts.delegation_executor import Delegator
@@ -30,8 +29,6 @@ from scripts.war_room.config import (
     validate_model_ids,
 )
 from scripts.war_room.phases import compute_borda_scores
-
-from scripts import delegation_services
 
 # ---------------------------------------------------------------------------
 # CJR-001: Named model ID constants + startup validation
@@ -116,106 +113,6 @@ class TestModelIdConstants:
             f"experts.py still has inline model ID strings: {found}. "
             "Use constants from scripts.war_room.config."
         )
-
-
-# ---------------------------------------------------------------------------
-# CJR-002: verify_service narrow exception
-# ---------------------------------------------------------------------------
-
-
-class TestVerifyServiceNarrowException:
-    """Auth probe must not swallow unexpected exceptions.
-
-    These used to run against qwen, which no longer declares an auth
-    probe: it has no auth subcommand, so the inherited one was delivered
-    to the model as a prompt. The contract under test is the probe's
-    exception handling, so the class moved to a provider that still runs
-    one, and plants a credential file so the cheaper checks do not settle
-    the question first.
-    """
-
-    @staticmethod
-    def _probed(tmp_path: Path) -> Delegator:
-        """Return a delegator whose codex entry reaches its auth probe."""
-        credential = tmp_path / "auth.json"
-        credential.write_text("{}")
-        delegator = Delegator(config_dir=tmp_path)
-        delegator.services["codex"] = replace(
-            delegator.services["codex"],
-            auth_files=(str(credential),),
-        )
-        return delegator
-
-    def test_unexpected_exception_propagates_from_auth_probe(
-        self, tmp_path: Path
-    ) -> None:
-        """Propagate an unexpected error raised by the auth probe.
-
-        GIVEN a version check that succeeds and an auth probe that
-            raises RuntimeError
-        WHEN verify_service runs
-        THEN the RuntimeError propagates
-        AND it is not swallowed as a normal issue
-        """
-        delegator = self._probed(tmp_path)
-
-        # --version call succeeds, auth status raises unexpected error
-        ok_result = MagicMock()
-        ok_result.returncode = 0
-
-        with patch(
-            "scripts.delegation_executor.subprocess.run",
-            side_effect=[ok_result, RuntimeError("unexpected auth failure")],
-        ):
-            with pytest.raises(RuntimeError, match="unexpected auth failure"):
-                delegator.verify_service("codex")
-
-    def test_timeout_is_caught_as_issue(self, tmp_path: Path) -> None:
-        """Report an auth-probe timeout as a service issue.
-
-        GIVEN a version check that succeeds and an auth probe that
-            raises TimeoutExpired
-        WHEN verify_service runs
-        THEN the service is reported unavailable
-        AND an auth-related issue is included
-        """
-        delegator = self._probed(tmp_path)
-
-        ok_result = MagicMock()
-        ok_result.returncode = 0
-
-        with patch(
-            "scripts.delegation_executor.subprocess.run",
-            side_effect=[
-                ok_result,
-                subprocess.TimeoutExpired(cmd=["codex", "login", "status"], timeout=10),
-            ],
-        ):
-            is_available, issues = delegator.verify_service("codex")
-            assert not is_available
-            assert any("auth" in i.lower() for i in issues)
-
-    def test_file_not_found_is_caught_as_issue(self, tmp_path: Path) -> None:
-        """Report a missing auth binary as a service issue.
-
-        GIVEN a version check that succeeds and an auth probe that
-            raises FileNotFoundError
-        WHEN verify_service runs
-        THEN the service is reported unavailable
-        AND an auth-related issue is included
-        """
-        delegator = self._probed(tmp_path)
-
-        ok_result = MagicMock()
-        ok_result.returncode = 0
-
-        with patch(
-            "scripts.delegation_executor.subprocess.run",
-            side_effect=[ok_result, FileNotFoundError("codex not found")],
-        ):
-            is_available, issues = delegator.verify_service("codex")
-            assert not is_available
-            assert any("auth" in i.lower() for i in issues)
 
 
 # ---------------------------------------------------------------------------
@@ -417,38 +314,3 @@ class TestBordaScoresCharacterization:
 
         expected = self._original_borda(votes, labels)
         assert compute_borda_scores(votes, labels) == expected
-
-
-class TestAuthMethodIsValidated:
-    """``auth_method`` is a de-facto enum over api_key, cli and none.
-
-    ``_apply_overrides`` validates field names, not values, so a config
-    saying ``auth_method: apikey`` constructed cleanly and then matched
-    neither the api_key branch nor the cli one: the service skipped both
-    the auth probe and the API-key check while reporting itself
-    configured.
-    """
-
-    def test_an_unknown_auth_method_is_rejected(self) -> None:
-        """A near-miss spelling must not construct."""
-        with pytest.raises(ValueError, match="auth_method"):
-            delegation_services.ServiceConfig(
-                name="typo",
-                command="typo-cli",
-                auth_method="apikey",
-            )
-
-    def test_each_known_auth_method_constructs(self) -> None:
-        """The three real values still work."""
-        for method in sorted(delegation_services.AUTH_METHODS):
-            config = delegation_services.ServiceConfig(
-                name="ok", command="ok-cli", auth_method=method
-            )
-            assert config.auth_method == method
-
-    def test_every_registered_service_declares_a_known_method(self) -> None:
-        """The shipped registry must satisfy its own invariant."""
-        for name, config in delegation_services.SERVICES.items():
-            assert config.auth_method in delegation_services.AUTH_METHODS, (
-                f"{name} declares auth_method {config.auth_method!r}"
-            )

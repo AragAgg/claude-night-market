@@ -23,12 +23,12 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 
-from .markdown_spans import INLINE_CODE
+from .markdown_spans import FENCED_CODE, INLINE_CODE
 
 DEFAULT_THRESHOLD = 0.35
 DEFAULT_MIN_SENTENCES = 8
 
-_FENCED_CODE = re.compile(r"^```.*?^```", re.DOTALL | re.MULTILINE)
+_FENCED_CODE = FENCED_CODE
 _INLINE_CODE = INLINE_CODE
 _SENTENCE_SPLIT = re.compile(r"(?<=[.!?])\s+")
 

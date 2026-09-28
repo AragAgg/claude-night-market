@@ -32,6 +32,7 @@ from shared.deduplication import (
     needs_update,
     update_index,
 )
+from shared.frontmatter import render_frontmatter
 from shared.safety_checks import is_safe_content
 from shared.text_utils import slugify
 
@@ -554,18 +555,6 @@ def _register_duplicate_url(
         )
 
 
-def _yaml_scalar(value: str) -> str:
-    """Quote *value* for use as a YAML double-quoted scalar.
-
-    JSON string syntax is a subset of YAML's double-quoted style, so
-    ``json.dumps`` escapes the quotes, newlines, and control characters
-    that would otherwise close the scalar early. Page titles, queries,
-    and URLs are all outside our control, and an unparsable capture is
-    invisible to every reader downstream.
-    """
-    return json.dumps(str(value))
-
-
 def store_webfetch_content(
     content: str,
     url: str,
@@ -585,19 +574,22 @@ def store_webfetch_content(
     content_hash = get_content_hash(content)
     content_preview = content[:500] + "..." if len(content) > 500 else content
 
-    queue_entry = f"""---
-queue_entry_id: {entry_id}
-created_at: {now.isoformat()}
-session_type: auto_capture
-source_type: webfetch
-topic: {_yaml_scalar(title)}
-status: pending_review
-priority: medium
-url: {_yaml_scalar(url)}
-content_hash: "{content_hash}"
-content_length: {len(content)}
-auto_generated: true
----
+    frontmatter = render_frontmatter(
+        {
+            "queue_entry_id": entry_id,
+            "created_at": now,
+            "session_type": "auto_capture",
+            "source_type": "webfetch",
+            "topic": title,
+            "status": "pending_review",
+            "priority": "medium",
+            "url": url,
+            "content_hash": content_hash,
+            "content_length": len(content),
+            "auto_generated": True,
+        }
+    )
+    queue_entry = f"""{frontmatter}
 
 # {title}
 
@@ -670,19 +662,22 @@ def store_websearch_results(
     content_for_hash = f"{query}|{results_content}"
     content_hash = get_content_hash(content_for_hash)
 
-    queue_entry = f"""---
-queue_entry_id: {entry_id}
-created_at: {now.isoformat()}
-session_type: auto_capture
-source_type: websearch
-topic: {_yaml_scalar(query)}
-status: pending_review
-priority: medium
-query: {_yaml_scalar(query)}
-result_count: {len(results)}
-content_hash: "{content_hash}"
-auto_generated: true
----
+    frontmatter = render_frontmatter(
+        {
+            "queue_entry_id": entry_id,
+            "created_at": now,
+            "session_type": "auto_capture",
+            "source_type": "websearch",
+            "topic": query,
+            "status": "pending_review",
+            "priority": "medium",
+            "query": query,
+            "result_count": len(results),
+            "content_hash": content_hash,
+            "auto_generated": True,
+        }
+    )
+    queue_entry = f"""{frontmatter}
 
 # WebSearch: {query}
 

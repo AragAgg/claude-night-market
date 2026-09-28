@@ -13,7 +13,8 @@ Check for:
 
 - `webfetch-*.md` - Auto-captured web content
 - `websearch-*.md` - Auto-captured search results
-- Any file with `status: pending_review` in frontmatter
+- Any file whose frontmatter `status` is `pending_review` (the capture
+  hooks write it quoted: `status: "pending_review"`)
 
 ## Step 2: Report Queue Status
 
@@ -71,7 +72,7 @@ mv plugins/memory-palace/docs/knowledge-corpus/queue/webfetch-*.md \
    plugins/memory-palace/docs/knowledge-corpus/
 
 # 2. Update frontmatter status
-# Change: status: pending_review -> status: processed
+# Change: status: "pending_review" -> status: "processed"
 
 # 3. Rename to permanent filename (remove webfetch- prefix, timestamp)
 # webfetch-article-name-2026-01-15.md -> article-name.md

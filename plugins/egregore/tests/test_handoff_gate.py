@@ -17,6 +17,7 @@ from pathlib import Path
 
 import handoff_gate as gate
 import pytest
+import yaml
 
 GOOD_REQUIREMENTS = """\
 ---
@@ -662,9 +663,78 @@ class TestLoadItem:
         self, tmp_path: Path
     ) -> None:
         handoff, tasks = gate.load_item(write_item(tmp_path))
-        assert handoff["item"] == "NS-001"
+        assert isinstance(handoff, gate.Handoff)
+        assert handoff.item == "NS-001"
+        assert handoff.branch == "night/NS-001-provider-timeout"
+        assert handoff.budget["max_attempts_per_task"] == 3
         assert [task["id"] for task in tasks] == ["T1", "T2"]
 
     def test_a_refused_item_raises(self, tmp_path: Path) -> None:
         with pytest.raises(ValueError, match="absent"):
             gate.load_item(write_item(tmp_path, **{"design.md": None}))
+
+
+def _handoff_doc(**changes: object) -> str:
+    """GOOD_HANDOFF with keys replaced, or removed where the value is ``_DROP``."""
+    data = yaml.safe_load(GOOD_HANDOFF.split("---")[1])
+    for key, value in changes.items():
+        if value is _DROP:
+            del data[key]
+        else:
+            data[key] = value
+    return "---\n" + yaml.safe_dump(data, sort_keys=False) + "---\n\nbody\n"
+
+
+_DROP = object()
+
+
+class TestTheHandoffIsTyped:
+    """Feature: the runner reads a parsed Handoff, never a raw mapping.
+
+    Read through ``.get(...) or {}``, a handoff missing its branch reached
+    ``git worktree add -b None``. A missing or mistyped key now stops at
+    the loader, which names it.
+    """
+
+    @pytest.mark.parametrize("key", gate.HANDOFF_REQUIRED_KEYS)
+    def test_a_missing_required_key_is_named(self, tmp_path: Path, key: str) -> None:
+        item = write_item(tmp_path, **{"handoff.md": _handoff_doc(**{key: _DROP})})
+
+        with pytest.raises(ValueError, match=repr(key)):
+            gate.load_item(item)
+
+    @pytest.mark.parametrize(
+        ("key", "value"),
+        [("branch", 123), ("base_branch", None), ("scope", "a/"), ("budget", [])],
+    )
+    def test_a_mistyped_key_is_named(
+        self, tmp_path: Path, key: str, value: object
+    ) -> None:
+        item = write_item(tmp_path, **{"handoff.md": _handoff_doc(**{key: value})})
+
+        with pytest.raises(ValueError, match=repr(key)):
+            gate.load_item(item)
+
+    def test_the_gate_refuses_a_mistyped_key(self, tmp_path: Path) -> None:
+        """Refused as MALFORMED, so ``main`` never reaches ``load_item`` with it."""
+        item = write_item(tmp_path, **{"handoff.md": _handoff_doc(branch=123)})
+
+        result = gate.check_item(item)
+
+        assert result.code == gate.MALFORMED
+        assert any("'branch'" in problem for problem in result.problems)
+
+    def test_the_gate_requires_exactly_the_handoff_fields(self) -> None:
+        required = tuple(
+            f.name
+            for f in dataclasses.fields(gate.Handoff)
+            if f.default is dataclasses.MISSING
+        )
+
+        assert gate.REQUIRED_DOCS["handoff.md"][1] == required
+
+    def test_the_handoff_cannot_be_reassigned(self, tmp_path: Path) -> None:
+        handoff, _ = gate.load_item(write_item(tmp_path))
+
+        with pytest.raises(dataclasses.FrozenInstanceError):
+            handoff.branch = "other"  # type: ignore[misc]  # frozen dataclass: the write must raise

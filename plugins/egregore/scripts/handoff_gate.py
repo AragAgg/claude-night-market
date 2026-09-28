@@ -20,8 +20,8 @@ Code  State           Meaning
 ===== ==============  ============================================
 0     ``READY``       every check passed
 1     ``MISSING``     a required document is absent
-2     ``MALFORMED``   frontmatter unparseable, or a required key or
-                      schema version is wrong
+2     ``MALFORMED``   frontmatter unparseable, or a required key,
+                      handoff key type or schema version is wrong
 3     ``UNSAFE``      the item asks for something no item may have
 4     ``INCOHERENT``  the four documents contradict each other
 ===== ==============  ============================================
@@ -32,8 +32,9 @@ from __future__ import annotations
 import argparse
 import json
 import shlex
-from collections.abc import Sequence
-from dataclasses import dataclass
+from collections.abc import Mapping, Sequence
+from dataclasses import MISSING as NO_DEFAULT
+from dataclasses import dataclass, fields
 from pathlib import Path
 from typing import Any
 
@@ -54,25 +55,68 @@ _STATES = {
     INCOHERENT: "INCOHERENT",
 }
 
+
+@dataclass(frozen=True)
+class Handoff:
+    """The handoff document, parsed once at the boundary the runner reads.
+
+    The runner used to read the raw mapping through ``.get(...) or {}``
+    at every use, so a missing ``branch`` became the string ``"None"``
+    handed to ``git worktree add -b``. Every field without a default is
+    required, and ``REQUIRED_DOCS`` takes its handoff keys from here so
+    the gate and the runner cannot disagree about what "required" means.
+    """
+
+    item: str
+    title: str
+    base_branch: str
+    branch: str
+    scope: Mapping[str, Any]
+    commands: Mapping[str, Any]
+    budget: Mapping[str, Any]
+    implementer: Mapping[str, Any]
+    babysitter: Mapping[str, Any]
+    worktree: str | None = None
+
+    @classmethod
+    def from_frontmatter(cls, data: Mapping[str, Any]) -> Handoff:
+        """Build from parsed frontmatter, naming the first bad key."""
+        values: dict[str, Any] = {}
+        for spec in fields(cls):
+            if spec.name not in data:
+                if spec.default is NO_DEFAULT:
+                    raise ValueError(
+                        f"handoff.md: required key {spec.name!r} is absent"
+                    )
+                continue
+            value = data[spec.name]
+            expected = dict if spec.name in _HANDOFF_SECTIONS else str
+            optional = spec.default is not NO_DEFAULT and value is None
+            if not optional and not isinstance(value, expected):
+                raise ValueError(
+                    f"handoff.md: {spec.name!r} must be a {expected.__name__}, "
+                    f"got {type(value).__name__}"
+                )
+            values[spec.name] = value
+        return cls(**values)
+
+
+#: Handoff keys holding a nested mapping rather than a single string.
+_HANDOFF_SECTIONS = frozenset(
+    {"scope", "commands", "budget", "implementer", "babysitter"}
+)
+
+#: The handoff keys the gate refuses to admit an item without.
+HANDOFF_REQUIRED_KEYS = tuple(
+    spec.name for spec in fields(Handoff) if spec.default is NO_DEFAULT
+)
+
 #: Each required document, its schema tag, and the keys it must carry.
 REQUIRED_DOCS = {
     "requirements.md": ("nightshift/requirements@1", ("item", "acceptance")),
     "design.md": ("nightshift/design@1", ("item", "risk", "traces")),
     "tasks.md": ("nightshift/tasks@1", ("item", "tasks")),
-    "handoff.md": (
-        "nightshift/handoff@1",
-        (
-            "item",
-            "title",
-            "base_branch",
-            "branch",
-            "scope",
-            "commands",
-            "budget",
-            "implementer",
-            "babysitter",
-        ),
-    ),
+    "handoff.md": ("nightshift/handoff@1", HANDOFF_REQUIRED_KEYS),
 }
 
 #: A diff larger than this needs a resolving spec reference. The number
@@ -178,9 +222,13 @@ def _load_documents(item_dir: Path) -> tuple[dict[str, Any], list[str], int]:
                 f"{name}: schema is {data.get('schema')!r}, expected {schema_tag!r}"
             )
             continue
-        for key in required_keys:
-            if key not in data:
-                problems.append(f"{name}: required key {key!r} is absent")
+        missing = [key for key in required_keys if key not in data]
+        problems += [f"{name}: required key {key!r} is absent" for key in missing]
+        if name == "handoff.md" and not missing:
+            try:
+                Handoff.from_frontmatter(data)
+            except ValueError as exc:
+                problems.append(str(exc))
         docs[name] = data
 
     if problems:
@@ -468,7 +516,7 @@ def check_item(item_dir: Path) -> GateResult:
     return GateResult(code=READY)
 
 
-def load_item(item_dir: Path) -> tuple[dict[str, Any], list[dict[str, Any]]]:
+def load_item(item_dir: Path) -> tuple[Handoff, list[dict[str, Any]]]:
     """Return the handoff and task list of an item the gate admits.
 
     Callers run ``check_item`` first. A directory the structural checks
@@ -477,7 +525,8 @@ def load_item(item_dir: Path) -> tuple[dict[str, Any], list[dict[str, Any]]]:
     docs, problems, code = _load_documents(Path(item_dir))
     if code != READY:
         raise ValueError("; ".join(problems))
-    return docs["handoff.md"], list(docs["tasks.md"].get("tasks") or [])
+    handoff = Handoff.from_frontmatter(docs["handoff.md"])
+    return handoff, list(docs["tasks.md"].get("tasks") or [])
 
 
 def main(argv: Sequence[str] | None = None) -> int:

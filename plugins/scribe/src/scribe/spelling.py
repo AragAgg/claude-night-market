@@ -28,7 +28,7 @@ from collections.abc import Iterable
 from pathlib import Path
 from typing import Any
 
-from .markdown_spans import INLINE_CODE
+from .markdown_spans import FENCED_CODE, INLINE_CODE, URL
 
 try:
     import yaml
@@ -43,9 +43,9 @@ DATA_FILE = (
 # Spans of text that must never be rewritten: fenced code blocks, inline code,
 # and URLs. A CSS ``color``, a variable named ``behaviour_flag``, or a link
 # path are not prose and must survive normalization untouched.
-_FENCED_CODE = re.compile(r"```.*?```", re.DOTALL)
+_FENCED_CODE = FENCED_CODE
 _INLINE_CODE = INLINE_CODE
-_URL = re.compile(r"https?://\S+")
+_URL = URL
 
 _MAP_CACHE: dict[str, str] | None = None
 _REGEX_CACHE: re.Pattern[str] | None = None

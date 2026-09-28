@@ -14,7 +14,7 @@ import handoff_gate
 import night_run
 import pytest
 
-from tests.test_handoff_gate import write_item
+from tests.test_handoff_gate import _DROP, _handoff_doc, write_item
 from tests.test_night_run import FakeRunner
 
 if TYPE_CHECKING:
@@ -89,3 +89,22 @@ class TestABrokenWalkIsNotARefusal:
         assert code == night_run.WALK_BROKEN_EXIT
         assert code not in gate_codes | {0}
         assert "setup_failed" in (item / "proof.md").read_text()
+
+
+class TestAMissingKeyNeverReachesTheWalk:
+    """Feature: no worktree is cut for a handoff missing a required key."""
+
+    @pytest.mark.parametrize("key", handoff_gate.HANDOFF_REQUIRED_KEYS)
+    def test_no_worktree_is_created(self, tmp_path: Path, key: str) -> None:
+        item = write_item(tmp_path, **{"handoff.md": _handoff_doc(**{key: _DROP})})
+        runner = FakeRunner({})
+
+        code = night_run.main(
+            ["--item-dir", str(item), "--root", str(tmp_path)],
+            runner=runner,
+            babysitter=_scripted,
+        )
+
+        assert code == handoff_gate.MALFORMED
+        assert not any("worktree" in call for call in runner.calls)
+        assert not (item / "proof.md").exists()

@@ -142,20 +142,22 @@ def _babysitter():
 @pytest.fixture
 def walked(project: Path):
     """Walk the item once and hand back the result and the worktree."""
-    handoff = {
-        "item": "E2E-1",
-        "branch": "night/e2e-1",
-        "base_branch": "main",
-        "worktree": ".egregore/worktrees/E2E-1",
-        "scope": {"allow_paths": ["calc.py"], "max_diff_lines": 50},
-        "implementer": {"provider": "auto", "allow_on_plan_fallback": False},
-        "commands": {"full_test": f"{sys.executable} -m pytest tests -q"},
-        "budget": {
+    handoff = handoff_gate.Handoff(
+        item="E2E-1",
+        title="Fix the calculator",
+        branch="night/e2e-1",
+        base_branch="main",
+        worktree=".egregore/worktrees/E2E-1",
+        scope={"allow_paths": ["calc.py"], "max_diff_lines": 50},
+        implementer={"provider": "auto", "allow_on_plan_fallback": False},
+        commands={"full_test": f"{sys.executable} -m pytest tests -q"},
+        budget={
             "max_attempts_per_task": 1,
             "implementer_timeout_s": 120,
             "claude_token_ceiling": CEILING,
         },
-    }
+        babysitter={"model": "sonnet"},
+    )
     result = night_run.run_item(
         handoff, TASKS, project, night_run.SubprocessRunner(), babysitter=_babysitter()
     )
