@@ -172,8 +172,8 @@ class TestMainHook:
         captured = capsys.readouterr()
         output = json.loads(captured.out)
         hook_out = output["hookSpecificOutput"]
-        assert hook_out["permissionDecision"] == "warn"
-        assert "Vow violation" in hook_out["permissionDecisionReason"]
+        assert "permissionDecision" not in hook_out
+        assert "Vow violation" in hook_out["additionalContext"]
 
     @pytest.mark.unit
     def test_block_when_shadow_mode_off_and_violation(self, hook_module, capsys):
@@ -192,7 +192,7 @@ class TestMainHook:
         assert exc.value.code == 0
         captured = capsys.readouterr()
         output = json.loads(captured.out)
-        assert output["hookSpecificOutput"]["permissionDecision"] == "block"
+        assert output["hookSpecificOutput"]["permissionDecision"] == "deny"
 
     @pytest.mark.unit
     def test_no_output_on_clean_commit(self, hook_module, capsys):

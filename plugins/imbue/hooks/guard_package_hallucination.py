@@ -37,6 +37,7 @@ from shared.package_guard import (  # noqa: E402 - hook injects sys.path before 
 )
 from shared.vow_utils import (  # noqa: E402 - same path-injection pattern as sibling vow hooks
     shadow_mode_active,
+    vow_output,
 )
 
 _REGISTRY_URLS = {
@@ -137,13 +138,9 @@ def main() -> None:
         # Hard findings block when blocking is enabled; unverified always warns.
         decision = "block" if (hard and not shadow) else "warn"
 
-        output = {
-            "hookSpecificOutput": {
-                "hookEventName": "PreToolUse",
-                "permissionDecision": decision,
-                "permissionDecisionReason": _format_reason(findings, shadow),
-            }
-        }
+        output = vow_output(
+            enforce=decision == "block", reason=_format_reason(findings, shadow)
+        )
         print(json.dumps(output))
         kinds = ",".join(sorted({f["kind"] for f in findings}))
         print(

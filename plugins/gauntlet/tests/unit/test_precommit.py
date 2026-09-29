@@ -295,10 +295,11 @@ class TestMain:
     @pytest.mark.unit
     def test_allows_with_valid_token(self, sample_knowledge_base: Path) -> None:
         """
-        Scenario: A valid pass token allows the commit through
+        Scenario: A valid pass token lifts the gate without approving
         Given a .gauntlet dir in gate mode with a valid token for the staged hash
         When main() is called with a git commit command
-        Then it returns a decision of "allow"
+        Then it returns no decision, leaving the commit to the user's own
+        permission settings ("allow" would skip their prompt)
         """
         gauntlet_dir = sample_knowledge_base.parent
         staged_hash = "deadbeef"
@@ -312,9 +313,7 @@ class TestMain:
             with patch("precommit_gate._get_staged_hash", return_value=staged_hash):
                 result = main(hook_input)
 
-        assert result is not None
-        hso = result.get("hookSpecificOutput", {})
-        assert hso.get("permissionDecision") == "allow"
+        assert result is None
 
     @pytest.mark.unit
     def test_denies_with_no_token_gate_mode(self, sample_knowledge_base: Path) -> None:

@@ -102,3 +102,29 @@ class TestGraphRiskContext:
         assert "high risk" in result
         assert "handler" in result
         assert "untested" in result.lower()
+
+    @pytest.mark.unit
+    def test_reports_analyzer_failure_on_stderr(
+        self,
+        gauntlet_dir: Path,
+        graph_with_nodes: GraphStore,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        """
+        Scenario: Blast radius analysis raises
+        Given analyze_changes raises an unexpected error
+        When precommit checks for risk
+        Then None is returned so the commit is not blocked
+        And one stderr line names the failure
+        """
+        with patch(
+            "gauntlet.blast_radius.analyze_changes",
+            side_effect=RuntimeError("graph schema mismatch"),
+        ):
+            result = _graph_risk_context(gauntlet_dir)
+        assert result is None
+        err = capsys.readouterr().err
+        assert "blast radius" in err
+        assert "RuntimeError" in err
+        assert "graph schema mismatch" in err
+        assert len(err.strip().splitlines()) == 1

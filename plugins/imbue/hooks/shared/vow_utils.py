@@ -18,6 +18,7 @@ import os
 import re
 import tempfile
 from pathlib import Path
+from typing import Any
 
 __all__ = [
     "O_NOFOLLOW",
@@ -92,6 +93,23 @@ def shadow_mode_active() -> bool:
     """
     val = os.environ.get("VOW_SHADOW_MODE", "1")
     return val.strip() not in _OFF_VALUES
+
+
+def vow_output(enforce: bool, reason: str) -> dict[str, Any]:
+    """Return the PreToolUse output for a vow that fired.
+
+    Claude Code honors permissionDecision values allow, deny, ask and
+    defer and ignores any other, so enforcement must say "deny". A vow
+    in shadow mode adds the reason as context and leaves the permission
+    decision to the user's settings.
+    """
+    hook: dict[str, Any] = {"hookEventName": "PreToolUse"}
+    if enforce:
+        hook["permissionDecision"] = "deny"
+        hook["permissionDecisionReason"] = reason
+    else:
+        hook["additionalContext"] = reason
+    return {"hookSpecificOutput": hook}
 
 
 def is_git_commit(command: str) -> bool:

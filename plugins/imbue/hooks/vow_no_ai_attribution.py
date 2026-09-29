@@ -22,6 +22,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 from shared.vow_utils import (  # noqa: E402 - hook script must inject sys.path before importing sibling shared/ module
     is_git_commit,
     shadow_mode_active,
+    vow_output,
 )
 
 # Known AI coding tools. Extending coverage (Codeium, Cody, Tabnine,
@@ -116,13 +117,7 @@ def main() -> None:
             )
         )
 
-        output = {
-            "hookSpecificOutput": {
-                "hookEventName": "PreToolUse",
-                "permissionDecision": decision,
-                "permissionDecisionReason": reason,
-            }
-        }
+        output = vow_output(enforce=decision == "block", reason=reason)
         print(json.dumps(output))
         print(
             f"[vow-no-ai-attribution] {decision.upper()}: AI attribution in commit",

@@ -38,6 +38,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent))
 from shared.vow_utils import (  # noqa: E402 - hook script must inject sys.path before importing sibling shared/ module
     shadow_mode_active,
+    vow_output,
 )
 
 _GUARDED_SUFFIXES = (".py", ".md", ".rs", ".ts", ".tsx", ".js", ".go", ".proto")
@@ -172,13 +173,7 @@ def main() -> None:
             )
         )
 
-        output = {
-            "hookSpecificOutput": {
-                "hookEventName": "PreToolUse",
-                "permissionDecision": decision,
-                "permissionDecisionReason": reason,
-            }
-        }
+        output = vow_output(enforce=decision == "block", reason=reason)
         print(json.dumps(output))
         print(
             f"[vow-no-edit-narration] {decision.upper()}: {label}",

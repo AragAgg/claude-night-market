@@ -23,16 +23,22 @@ class IntakeContext:
 
 
 def build_hook_output(
-    permission: str,
+    permission: str | None,
     response_parts: list[str],
     decision: Any,
 ) -> dict[str, Any]:
-    """Build the hookSpecificOutput dict for the Claude hook protocol."""
+    """Build the hookSpecificOutput dict for the Claude hook protocol.
+
+    ``permission`` is None when the hook only adds context: any
+    permissionDecision would override the user's own prompt for the
+    web call, and "allow" would skip it.
+    """
     output: dict[str, Any] = {
         "hookEventName": "PreToolUse",
-        "permissionDecision": permission,
         "additionalContext": "\n".join(response_parts),
     }
+    if permission is not None:
+        output["permissionDecision"] = permission
     if permission == "deny":
         output["permissionDecisionReason"] = (
             "cache_only mode: local knowledge available"
@@ -73,9 +79,7 @@ def build_hook_payload(
         or decision.should_flag_for_intake
         or response_parts
     ):
-        return {
-            "hookSpecificOutput": build_hook_output("allow", response_parts, decision)
-        }
+        return {"hookSpecificOutput": build_hook_output(None, response_parts, decision)}
     return None
 
 

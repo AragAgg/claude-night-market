@@ -11,6 +11,8 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import os
+import subprocess
 import sys
 from io import StringIO
 from pathlib import Path
@@ -636,3 +638,84 @@ class TestFindPluginRoot:
 
         found_root = tdd_gate_module._find_plugin_root(nested_file)
         assert found_root is None
+
+
+_GATE = Path(__file__).resolve().parents[3] / "hooks" / "tdd_bdd_gate.py"
+
+
+def _run_gate(tmp_path: Path, *, env_headless: bool, payload_headless: bool) -> dict:
+    """Run the gate as Claude Code does: a subprocess fed JSON on stdin.
+
+    The target is a new script in a plugin root with no test beside it, which
+    is the case the gate exists for.
+    """
+    plugin_root = tmp_path / "x"
+    (plugin_root / "scripts").mkdir(parents=True)
+    (plugin_root / "pyproject.toml").write_text("[project]\nname = 'x'\n")
+    payload: dict = {
+        "tool_name": "Write",
+        "tool_input": {"file_path": str(plugin_root / "scripts" / "foo.py")},
+    }
+    if payload_headless:
+        payload["headless"] = True
+    env = {k: v for k, v in os.environ.items() if k != "CLAUDE_CODE_HEADLESS"}
+    if env_headless:
+        env["CLAUDE_CODE_HEADLESS"] = "1"
+    proc = subprocess.run(
+        [sys.executable, str(_GATE)],
+        input=json.dumps(payload),
+        capture_output=True,
+        text=True,
+        env=env,
+        check=True,
+        timeout=30,
+    )
+    return json.loads(proc.stdout)["hookSpecificOutput"]
+
+
+class TestHeadlessDefer:
+    """Feature: Headless runs pause on untested new code.
+
+    As an operator running claude -p
+    I want the gate to defer the Write
+    So that I can resume and decide instead of the edit landing unreviewed.
+
+    Claude Code reads ``permissionDecision`` and ignores unknown keys, so a
+    misspelled key lets the Write through with no signal.
+    """
+
+    @pytest.mark.unit
+    @pytest.mark.parametrize(
+        ("env_headless", "payload_headless"),
+        [(True, False), (False, True)],
+        ids=["env-var", "payload-flag"],
+    )
+    def test_headless_new_file_without_test_defers(
+        self, tmp_path: Path, env_headless: bool, payload_headless: bool
+    ) -> None:
+        """
+        Scenario: New implementation, no test, headless session
+        Given headless mode detected from the env var or the payload
+        When the gate sees a Write of a new scripts/foo.py with no test
+        Then hookSpecificOutput.permissionDecision is "defer" with a reason
+        """
+        out = _run_gate(
+            tmp_path, env_headless=env_headless, payload_headless=payload_headless
+        )
+        assert out["hookEventName"] == "PreToolUse"
+        assert out["permissionDecision"] == "defer"
+        assert "foo.py" in out["permissionDecisionReason"]
+
+    @pytest.mark.unit
+    def test_interactive_new_file_without_test_only_reminds(
+        self, tmp_path: Path
+    ) -> None:
+        """
+        Scenario: Same Write in an interactive session
+        Given neither headless signal is present
+        When the gate sees the Write
+        Then it injects the reminder and makes no permission decision
+        """
+        out = _run_gate(tmp_path, env_headless=False, payload_headless=False)
+        assert "permissionDecision" not in out
+        assert "IRON LAW" in out["additionalContext"]

@@ -96,8 +96,8 @@ class TestGuardScopeRampHook:
         )
         assert code == 0
         assert out is not None
-        assert out["hookSpecificOutput"]["permissionDecision"] == "warn"
-        assert "rung" in out["hookSpecificOutput"]["permissionDecisionReason"]
+        assert "permissionDecision" not in out["hookSpecificOutput"]
+        assert "rung" in out["hookSpecificOutput"]["additionalContext"]
 
     @pytest.mark.unit
     def test_over_rung_blocks_when_blocking_enabled(self):
@@ -109,7 +109,7 @@ class TestGuardScopeRampHook:
         )
         assert code == 0
         assert out is not None
-        assert out["hookSpecificOutput"]["permissionDecision"] == "block"
+        assert out["hookSpecificOutput"]["permissionDecision"] == "deny"
 
     @pytest.mark.unit
     def test_high_stakes_reason_demands_explanation(self):
@@ -120,7 +120,7 @@ class TestGuardScopeRampHook:
             {"VOW_SHADOW_MODE": "1"},
         )
         assert out is not None
-        reason = out["hookSpecificOutput"]["permissionDecisionReason"]
+        reason = out["hookSpecificOutput"]["additionalContext"]
         assert "explain" in reason.lower()
 
     @pytest.mark.unit
@@ -154,7 +154,7 @@ class TestGuardScopeRampHook:
             {"IMBUE_STAKES": "CRITICAL", "VOW_SHADOW_MODE": "1"},
         )
         assert out is not None
-        reason = out["hookSpecificOutput"]["permissionDecisionReason"]
+        reason = out["hookSpecificOutput"]["additionalContext"]
         assert "explain" in reason.lower()
 
     @pytest.mark.unit
