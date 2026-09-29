@@ -77,9 +77,8 @@ class CooldownState(Protocol):
     """The two fields :func:`record_reset` writes.
 
     Naming the shape structurally is what lets the assignments below
-    type-check. The parameter was previously ``object``, which every
-    attribute write then had to suppress one at a time.
-    ``budget.Budget`` satisfies this, and so would any later carrier of
+    type-check without suppressing each attribute write.
+    ``budget.Budget`` satisfies this, and so would any other carrier of
     the same two fields.
     """
 
@@ -140,12 +139,10 @@ def parse_reset(
         latest = max(candidates)
         if latest > moment:
             return latest
-        # A stale reset says nothing about now, so it is not an answer.
-        # It used to return one anyway, and returning None here skipped
-        # the retry-after below: a response carrying both a reset header
-        # from the previous window and a live retry-after was read as
-        # "did not say", which parks the run for a fixed wait rather
-        # than the one the response asked for.
+        # A stale reset says nothing about now, so it is not an answer,
+        # and the retry-after below still gets its turn: a response can
+        # carry a reset header from the previous window beside a live
+        # retry-after, and the retry-after is the wait it asked for.
 
     retry_after = headers.get("retry-after")
     if retry_after:
@@ -169,12 +166,11 @@ def record_reset(
 ) -> datetime:
     """Set the cooldown fields on ``budget`` and return the resume instant.
 
-    This mutates the object and does not write it anywhere. The docstring
-    used to say it wrote the cooldown the watchdog reads, which it never
-    did, and no caller persisted it either, so the watchdog relaunched
-    straight into the same rate limit. Persisting is the caller's job
-    because this module deliberately knows only the two-field
-    :class:`CooldownState` shape, not ``budget.Budget`` or its path.
+    This mutates the object and does not write it anywhere. The caller
+    must persist it, or the watchdog relaunches straight into the same
+    rate limit. Persisting is the caller's job because this module
+    knows only the two-field :class:`CooldownState` shape, not
+    ``budget.Budget`` or its path.
 
     Returns the instant recorded. When ``reset_at`` is None the fallback
     is ``UNKNOWN_RESET_WAIT_MINUTES`` from now: an unattended run that
@@ -194,8 +190,11 @@ def cron_for(reset_at: datetime, grace_minutes: int = 0) -> str:
     ``grace_minutes`` nudges the fire time past the boundary. Firing at
     the exact reset instant risks a second refusal from a limit that has
     not quite lifted, and a refused relaunch costs another whole cycle.
+
+    The fields are in the machine's local zone, because ``CronCreate``
+    reads its expression in the user's local time, not UTC.
     """
-    fire = reset_at + timedelta(minutes=grace_minutes)
+    fire = (reset_at + timedelta(minutes=grace_minutes)).astimezone()
     return f"{fire.minute} {fire.hour} {fire.day} {fire.month} *"
 
 
@@ -271,11 +270,9 @@ class ResumePlan:
     ``CRON``
         A ``fire_at`` and the cron expression that carries it.
     ``NOTHING``
-        Neither. This is the shape that mattered: a ``NOTHING`` plan
-        used to carry a real ``fire_at``, so a caller reading the time
-        without first reading the mechanism scheduled against a
-        mechanism that had already declined to schedule anything.
-        ``why`` then says what to install to get one.
+        Neither, so a caller that reads the time without first reading
+        the mechanism finds no time to schedule against. ``why`` says
+        what to install to get one.
     """
 
     mechanism: str

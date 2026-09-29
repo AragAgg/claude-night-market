@@ -424,3 +424,55 @@ class TestRunScout:
         """Given no exemplars argument, when scouting, then uses defaults."""
         run_scout(exemplars=None, post_to_discussions=False)
         assert mock_fetch.call_count == len(default_exemplars())
+
+
+class TestGhFailuresAreReported:
+    """A failed gh call says why on stderr, except a plain 404.
+
+    A 404 means the exemplar has no CONTRIBUTING.md, which is expected.
+    Anything else (unauthenticated, rate limited, network) was dropped,
+    so an unauthenticated scout printed nothing and posted nothing.
+    """
+
+    @patch("subprocess.run")
+    def test_a_404_is_quiet(self, mock_run: MagicMock, capsys) -> None:
+        mock_run.return_value = MagicMock(
+            returncode=1, stdout="", stderr="gh: Not Found (HTTP 404)"
+        )
+        assert fetch_contributing_guide("org", "repo") is None
+        assert capsys.readouterr().err == ""
+
+    @patch("subprocess.run")
+    def test_another_fetch_failure_reaches_stderr(
+        self, mock_run: MagicMock, capsys
+    ) -> None:
+        mock_run.return_value = MagicMock(
+            returncode=4, stdout="", stderr="gh: To get started, run: gh auth login"
+        )
+        assert fetch_contributing_guide("org", "repo") is None
+        err = capsys.readouterr().err
+        assert "org/repo" in err
+        assert "gh auth login" in err
+
+    @patch("subprocess.run")
+    def test_a_failed_post_reaches_stderr(self, mock_run: MagicMock, capsys) -> None:
+        mock_run.return_value = MagicMock(
+            returncode=1, stdout="", stderr="HTTP 401: Bad credentials"
+        )
+        url = post_discussion(
+            title="T", body="B", category_id="C", repo_owner="o", repo_name="r"
+        )
+        assert url is None
+        assert "Bad credentials" in capsys.readouterr().err
+
+    @patch("scout.post_discussion", return_value=None)
+    @patch(
+        "scout.fetch_contributing_guide",
+        return_value="## Testing\n\n- Run pytest before each commit\n",
+    )
+    def test_run_scout_raises_when_the_requested_post_fails(
+        self, mock_fetch: MagicMock, mock_post: MagicMock
+    ) -> None:
+        exemplars = [ExemplarProject(owner="org", repo="lib", language="python")]
+        with pytest.raises(RuntimeError, match="Discussion"):
+            run_scout(exemplars=exemplars, post_to_discussions=True)

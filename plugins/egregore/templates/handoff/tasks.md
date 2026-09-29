@@ -10,6 +10,8 @@ tasks:
     evidence:
       command: uv run pytest path/to/test_file.py::test_name -q
       expect: fail
+      # Required with expect: fail. A nonzero exit alone also covers a
+      # check that never ran (pytest exits 4 on a typo, 5 on no tests).
       match: "1 failed"
     depends_on: []
   - id: T2
