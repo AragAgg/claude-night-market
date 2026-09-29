@@ -805,8 +805,8 @@ class TestTier5SemicolonSplice:
     """Feature: Detect prose semicolons that read more naturally rephrased.
 
     Newer models reach for the semicolon as a sophistication marker,
-    splicing two independent clauses where a period or a coordinating
-    conjunction ("and", "but", "so") reads more naturally. The policy
+    splicing two independent clauses where a period, "and" or "but"
+    reads more naturally. The policy
     is "semicolons in prose only when absolutely necessary", so this
     category surfaces every prose semicolon for human judgment rather
     than auto-rewriting: a list whose items carry internal commas is a

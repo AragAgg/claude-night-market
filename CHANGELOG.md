@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **", so" consequence tails are surfaced and measured** (scribe,
+  sanctum, hookify). Commit bodies here carried none per 1000 words
+  in January 2026 and 8.9 by September, against 0.18 in the book.
+  `tier5.so_connective` marks each tail at medium confidence and is
+  never scored. `scribe.connectives.check_so_density` reports a page
+  above 2.0 per 1000 words through `slop_score.py --audit`. The
+  slop-detector `structural-patterns` module carries the rewrite
+  order: delete a consequence the reader can infer, give it its own
+  sentence, lead with the cause, or name the mechanism. The sanctum
+  output-hygiene module, the commit-message skill, doc-generator,
+  the slop agents and the hookify slop rules point to it.
+
+### Changed
+
+- **Semicolon-splice guidance no longer offers "so" as the fix.** The
+  house rule, the slop-detector module and two hookify rules
+  recommended "and" / "but" / "so", which traded one tell for
+  another. `tests/test_so_connective_guidance.py` fails if any
+  guidance file offers it again.
+
 ## [1.9.21] - 2026-09-28
 
 ### Added

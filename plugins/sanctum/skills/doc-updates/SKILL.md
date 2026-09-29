@@ -152,6 +152,8 @@ This detects:
 - **Sycophantic phrases**: "I'd be happy to", "Great question!"
 - **Punctuation stand-ins**: spaced `--`, `+` for "and", semicolon splices
 - **Contrastive negation**: "It's not X, it's Y", "X, not Y", ", not just Y"
+- **Consequence tails**: ", so the ..." after fact after fact, with a
+  density reading above 2.0 per 1000 words
 - **Over-explained fixes and negative framing**: "in order to", "this
   ensures that", "not uncommon", and a negation-density reading per file
 

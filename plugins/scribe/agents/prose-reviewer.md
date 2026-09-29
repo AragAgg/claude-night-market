@@ -108,6 +108,10 @@ Compare against the register's extracted features:
 - **Identical openings**: Multiple paragraphs starting with same structure
 - **Uniform clause density**: Every sentence has same number of clauses
 - **Rhythm lock**: Sentences settling into predictable cadence
+- **Consequence tails**: ", so ..." appended to fact after fact.
+  Advise deleting a consequence the reader can infer, else giving it
+  its own sentence or leading with the cause. Advisory: one ", so" is
+  ordinary English
 
 ## Output Format
 

@@ -144,12 +144,22 @@ unavailable.
    end-of-options separator and is not punctuation.
 2b. Prose semicolon splices. A semicolon joining two
    independent clauses reads more naturally as two sentences or
-   one coordinating conjunction. Rephrase rather than swapping
-   in an em dash, which is usually what the semicolon replaced.
+   joined by "and" or "but". Rephrase rather than swapping in an
+   em dash, which is usually what the semicolon replaced, or a
+   ", so" tail (2c).
    Since 2026-09-18 the unambiguous splice (no comma on either
    side, lowercase continuation) is scored at high confidence.
    A list whose items carry internal commas is the one durable
    keep, and the pattern does not match it.
+2c. Consequence tails. "The index was stale, so the lookup
+   missed" appends a consequence with a comma and "so". One is
+   ordinary English. A page that explains every fact this way
+   reads as generated. First ask whether the reader needs the
+   consequence at all, and delete it when they do not. Otherwise
+   give it its own sentence, lead with the cause, or name the
+   mechanism. `tier5.so_connective` marks each tail at medium
+   confidence, and `--audit` reports a density above 2.0 per
+   1000 words.
 3. Scan for tier 1 slop: "structured", "comprehensive",
    "actionable", "seamless", "robust", "myriad",
    "empower", "navigate" (as metaphor)
@@ -214,9 +224,13 @@ modesty.
   rewrite the sentence (fine in code, math, version strings,
   and diagram labels)
 - Replace a prose semicolon splice with a period (two
-  sentences) or a coordinating conjunction ("and", "but",
-  "so"). Keep the semicolon only when removing it creates
-  ambiguity, such as a list whose items carry internal commas
+  sentences) or "and" / "but". Keep the semicolon only when
+  removing it creates ambiguity, such as a list whose items
+  carry internal commas
+- Question every ", so" tail before rewording it. Delete a
+  consequence the reader can infer. Give a needed one its own
+  sentence, lead with the cause ("Because the index was stale,
+  the lookup missed"), or name the mechanism that links the two
 - Strip "Let's", "We'll", "In this guide" framings. Start
   the sentence at the substantive content
 - Replace hedging seesaw with a position
@@ -412,8 +426,8 @@ ever apply to this repo.
   with `"` and `'`/`'` with `'` in technical prose.
 - **Semicolon splice**: a semicolon joining two independent
   clauses ("The system is fast; it scales") is a sophistication
-  marker. Split into two sentences or join with "and"/"but"/
-  "so". Keep the semicolon only when a list's items carry
+  marker. Split into two sentences or join with "and" or
+  "but". Keep the semicolon only when a list's items carry
   internal commas. The splice with no comma on either side is
   scored. A comma-bearing list is not matched at all.
 - **Over-explained fixes**: narration wrapped around a change,
@@ -429,6 +443,17 @@ ever apply to this repo.
   changelogs, commit bodies, and PR descriptions. The judgment
   half belongs to document economy's sentence-weight check.
   This is the lexical half.
+- **Consequence tail (", so")**: "X, so Y" and "X, so that Y"
+  attach a consequence to every fact. Commit bodies here went
+  from none per 1000 words in January 2026 to 8.9 in September,
+  and the book holds 0.18. Rewrite in this order: delete the
+  consequence when the reader can infer it, split it into its
+  own sentence, lead with the cause, or name the mechanism.
+  "So that" stating a purpose takes no comma and is not
+  matched. `tier5.so_connective` is medium confidence and never
+  scored. `scribe.connectives.check_so_density` reports a page
+  above 2.0 per 1000 words through `--audit`. Detail:
+  `Skill(scribe:slop-detector)` module `structural-patterns.md`.
 - **Loop/cascade vocabulary**: replace "unpack" (verb,
   metaphor) with "explain"; "surface" (verb, metaphor) with
   "raise" or "report"; "a quiet shift" with the named shift;

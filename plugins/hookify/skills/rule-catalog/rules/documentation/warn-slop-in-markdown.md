@@ -21,7 +21,7 @@ One of these matched the text being written:
 | Em dash `—` | A colon, a period, or parentheses |
 | Spaced double dash ` -- ` | Same. `--` is a shell end-of-options marker, not punctuation |
 | `+` joining words in prose | "and", or rewrite the sentence |
-| `;` splicing two clauses | Two sentences, or "and" / "but" / "so" |
+| `;` splicing two clauses | Two sentences, or "and" / "but" |
 | "X, not Y" and ", not just Y" | State X. Delete the negated half |
 | "never does Y instead of X", "does not Y rather than X" | State what it does. Delete the refused alternative |
 | Smart quotes `“ ” ‘ ’` | Straight quotes `"` `'` |

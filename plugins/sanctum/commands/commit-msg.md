@@ -50,6 +50,8 @@ Run these git commands to gather context, then draft the message.
    - `--` used as prose punctuation becomes a colon or a rewrite.
    - arrows `->` and `→` used as connectors become `to` or `into`.
    - smart quotes `“ ” ‘ ’` become straight `"` and `'`.
+   - a `, so` tail on fact after fact: delete a consequence the
+     reader can infer, or give it its own sentence.
 
 5b. **Subject-matter check** (Contract B): describe the change by its
    reader-facing effect. Name neither the AI origin nor the specific
