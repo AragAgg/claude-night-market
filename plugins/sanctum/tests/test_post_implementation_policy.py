@@ -57,8 +57,6 @@ class TestModuleConstants:
     def test_lightweight_agents_contains_expected_entries(self) -> None:
         """Given LIGHTWEIGHT_AGENTS, it should include review and optimizer agents."""
         expected = {
-            "quick-query",
-            "simple-task",
             "code-reviewer",
             "architecture-reviewer",
             "rust-auditor",
@@ -66,6 +64,13 @@ class TestModuleConstants:
             "context-optimizer",
         }
         assert LIGHTWEIGHT_AGENTS == expected
+
+    @pytest.mark.unit
+    @pytest.mark.parametrize("agent", sorted(LIGHTWEIGHT_AGENTS))
+    def test_each_lightweight_agent_names_a_shipped_agent(self, agent: str) -> None:
+        """Given a lightweight name, some plugin ships an agent file for it."""
+        plugins = Path(__file__).resolve().parents[2]
+        assert list(plugins.glob(f"*/agents/{agent}.md")), agent
 
     @pytest.mark.bdd
     @pytest.mark.unit
@@ -299,6 +304,28 @@ class TestLightweightAgentPath:
 
     @pytest.mark.bdd
     @pytest.mark.unit
+    @pytest.mark.parametrize(
+        "agent_type",
+        ["code-reviewer", "pensive:code-reviewer", "conserve:bloat-auditor"],
+    )
+    def test_bare_and_plugin_scoped_names_both_defer(self, agent_type: str) -> None:
+        """Given a bare or plugin-scoped agent_type, governance is deferred."""
+        input_data = json.dumps({"agent_type": agent_type})
+        with patch("sys.stdin", StringIO(input_data)):
+            captured_stdout = StringIO()
+            with patch("sys.stdout", captured_stdout):
+                with pytest.raises(SystemExit) as exc_info:
+                    main()
+
+        assert exc_info.value.code == 0
+        context = json.loads(captured_stdout.getvalue())["hookSpecificOutput"][
+            "additionalContext"
+        ]
+        assert f"Agent '{agent_type}'" in context
+        assert "deferred" in context
+
+    @pytest.mark.bdd
+    @pytest.mark.unit
     def test_lightweight_output_has_correct_event_name(self) -> None:
         """Given a lightweight agent, hookEventName is SessionStart."""
         input_data = json.dumps({"agent_type": "code-reviewer"})
@@ -373,9 +400,12 @@ class TestErrorHandling:
 
     @pytest.mark.bdd
     @pytest.mark.unit
-    def test_empty_agent_type_string_gets_full_governance(self) -> None:
-        """Given agent_type as empty string, main() injects full governance."""
-        input_data = json.dumps({"agent_type": ""})
+    @pytest.mark.parametrize("agent_type", ["", None], ids=["empty", "null"])
+    def test_empty_agent_type_string_gets_full_governance(
+        self, agent_type: str | None
+    ) -> None:
+        """Given agent_type empty or null, main() injects full governance."""
+        input_data = json.dumps({"agent_type": agent_type})
         with patch("sys.stdin", StringIO(input_data)):
             captured_stdout = StringIO()
             with patch("sys.stdout", captured_stdout):

@@ -1,16 +1,12 @@
 #!/usr/bin/env python3
 """Cross-check the skills plugin.json registers against the ones on disk.
 
-The block this replaces named four skills in a hardcoded list and tested
-that each one's SKILL.md exists. It reported OK over a plugin that had
-nine, so the four this PR added were never checked, and its `[X]` arm
-could not fire in any case: the loop directly above it had just listed
-the same files off the same directory.
-
-The pair of directions here is what makes the check worth running. A
-registered skill with no SKILL.md does not load. A skill on disk that
-plugin.json omits is invisible to the harness however complete it is,
-which is the likelier mistake when a plugin gains a provider.
+Both directions are checked, and both come from plugin.json and the
+directory rather than a hardcoded list, so a newly added skill is
+covered without editing this script. A registered skill with no
+SKILL.md does not load. A skill on disk that plugin.json omits is
+invisible to the harness however complete it is, which is the likelier
+mistake when a plugin gains a provider.
 """
 
 from __future__ import annotations

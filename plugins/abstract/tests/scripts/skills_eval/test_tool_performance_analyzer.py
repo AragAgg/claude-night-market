@@ -1,6 +1,8 @@
 """Tests for tool performance analysis functionality."""
 
 import json
+import subprocess
+from pathlib import Path
 
 import pytest
 
@@ -10,6 +12,34 @@ from abstract.skills_eval import performance as performance_module
 # Test constants
 EXPECTED_TOOL_COUNT = 3
 MAX_SCORE = 100
+
+# Scripted wall-clock cost and output of each fixture tool. slow-tool's 0.3s
+# matches the sleep in its source and clears SLOW_THRESHOLD; the others sit
+# under it.
+SCRIPTED_RUNS = {
+    "fast-tool.py": (0.01, "Tool executed successfully\n"),
+    "slow-tool.py": (0.3, "Slow tool completed\n"),
+    "memory-intensive-tool.py": (0.02, "Processed 100 items\n"),
+}
+
+
+@pytest.fixture
+def scripted_runs(monkeypatch):
+    """Replace the tool subprocess and the clock with a scripted pair.
+
+    Each run advances a fake clock by the tool's scripted cost, so the
+    analyzer's timing arithmetic sees the same spans on every run without
+    spawning an interpreter per tool.
+    """
+    clock = [1000.0]
+
+    def run(argv, **kwargs):
+        cost, stdout = SCRIPTED_RUNS[Path(argv[0]).name]
+        clock[0] += cost
+        return subprocess.CompletedProcess(argv, 0, stdout=stdout, stderr="")
+
+    monkeypatch.setattr(performance_module.subprocess, "run", run)
+    monkeypatch.setattr(performance_module.time, "time", lambda: clock[0])
 
 
 class TestToolPerformanceAnalyzer:
@@ -95,7 +125,7 @@ if __name__ == "__main__":
         assert fast_metrics["success"] is True
         assert "timeout" not in fast_metrics
 
-    def test_compare_tool_performance(self, sample_tools_dir, monkeypatch) -> None:
+    def test_compare_tool_performance(self, sample_tools_dir, scripted_runs) -> None:
         """execution_time is the wall-clock span the analyzer measured.
 
         A real comparison of a sleeping tool against a quick one is a
@@ -103,18 +133,16 @@ if __name__ == "__main__":
         took 3.1s and the sleeping one 2.7s. The clock is faked instead,
         so the test pins the arithmetic and stays deterministic.
         """
-        readings = iter([100.0, 100.1, 200.0, 202.0])
-        monkeypatch.setattr(performance_module.time, "time", lambda: next(readings))
         analyzer = ToolPerformanceAnalyzer(sample_tools_dir)
 
         fast_metrics = analyzer.measure_tool_performance("fast-tool.py")
         slow_metrics = analyzer.measure_tool_performance("slow-tool.py")
 
-        assert fast_metrics["execution_time"] == pytest.approx(0.1)
-        assert slow_metrics["execution_time"] == pytest.approx(2.0)
+        assert fast_metrics["execution_time"] == pytest.approx(0.01)
+        assert slow_metrics["execution_time"] == pytest.approx(0.3)
         assert slow_metrics["execution_time"] > fast_metrics["execution_time"]
 
-    def test_benchmark_all_tools(self, sample_tools_dir) -> None:
+    def test_benchmark_all_tools(self, sample_tools_dir, scripted_runs) -> None:
         """Test detailed benchmarking of all tools."""
         analyzer = ToolPerformanceAnalyzer(sample_tools_dir)
         benchmark_results = analyzer.benchmark_all_tools()
@@ -125,7 +153,9 @@ if __name__ == "__main__":
         assert benchmark_results["total_tools"] == EXPECTED_TOOL_COUNT
         assert len(benchmark_results["tools"]) == EXPECTED_TOOL_COUNT
 
-    def test_identify_performance_bottlenecks(self, sample_tools_dir) -> None:
+    def test_identify_performance_bottlenecks(
+        self, sample_tools_dir, scripted_runs
+    ) -> None:
         """Test identification of performance bottlenecks."""
         analyzer = ToolPerformanceAnalyzer(sample_tools_dir)
         benchmark_results = analyzer.benchmark_all_tools()
@@ -136,7 +166,7 @@ if __name__ == "__main__":
         bottleneck_tools = [b["tool"] for b in bottlenecks]
         assert "slow-tool.py" in bottleneck_tools
 
-    def test_suggest_optimizations(self, sample_tools_dir) -> None:
+    def test_suggest_optimizations(self, sample_tools_dir, scripted_runs) -> None:
         """Test optimization suggestions."""
         analyzer = ToolPerformanceAnalyzer(sample_tools_dir)
         benchmark_results = analyzer.benchmark_all_tools()
@@ -150,7 +180,7 @@ if __name__ == "__main__":
             ]
             assert len(optimization_for_slow) > 0
 
-    def test_track_performance_over_time(self, sample_tools_dir) -> None:
+    def test_track_performance_over_time(self, sample_tools_dir, scripted_runs) -> None:
         """Test performance tracking across multiple runs."""
         analyzer = ToolPerformanceAnalyzer(sample_tools_dir)
 
@@ -166,7 +196,7 @@ if __name__ == "__main__":
         assert "improvements" in comparison
         assert "regressions" in comparison
 
-    def test_generate_performance_report(self, sample_tools_dir) -> None:
+    def test_generate_performance_report(self, sample_tools_dir, scripted_runs) -> None:
         """Test performance report generation."""
         analyzer = ToolPerformanceAnalyzer(sample_tools_dir)
         benchmark_results = analyzer.benchmark_all_tools()
@@ -195,7 +225,9 @@ if __name__ == "__main__":
         assert "memory_usage" in memory_metrics
         assert memory_metrics["memory_usage"] > 0
 
-    def test_calculate_performance_scores(self, sample_tools_dir) -> None:
+    def test_calculate_performance_scores(
+        self, sample_tools_dir, scripted_runs
+    ) -> None:
         """Test performance score calculation."""
         analyzer = ToolPerformanceAnalyzer(sample_tools_dir)
         benchmark_results = analyzer.benchmark_all_tools()
@@ -211,7 +243,9 @@ if __name__ == "__main__":
             assert 0 <= score_data["memory_score"] <= MAX_SCORE
             assert 0 <= score_data["overall_score"] <= MAX_SCORE
 
-    def test_export_performance_data(self, sample_tools_dir, tmp_path) -> None:
+    def test_export_performance_data(
+        self, sample_tools_dir, tmp_path, scripted_runs
+    ) -> None:
         analyzer = ToolPerformanceAnalyzer(sample_tools_dir)
         benchmark_results = analyzer.benchmark_all_tools()
 
@@ -228,7 +262,9 @@ if __name__ == "__main__":
         assert "tools" in exported_data
         assert "summary" in exported_data
 
-    def test_detect_performance_regressions(self, sample_tools_dir) -> None:
+    def test_detect_performance_regressions(
+        self, sample_tools_dir, scripted_runs
+    ) -> None:
         """Test detection of performance regressions."""
         analyzer = ToolPerformanceAnalyzer(sample_tools_dir)
 

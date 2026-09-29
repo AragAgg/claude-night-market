@@ -10,9 +10,9 @@ So that I can take immediate action before working with a compromised environmen
 from __future__ import annotations
 
 import importlib.util
-import inspect
 import io
 import json
+import subprocess
 import sys
 import traceback as tb
 from pathlib import Path
@@ -425,16 +425,25 @@ class TestMainIntegration:
         assert captured.out == ""
 
     @pytest.mark.unit
-    def test_never_crashes(self) -> None:
+    def test_never_crashes(self, tmp_path: Path) -> None:
         """Scenario: Hook must never crash the session
-        Given the hook source code
-        When inspected
-        Then it wraps main() in try/except and exits 0.
+        Given malformed stdin and an undecodable uv.lock in the project
+        When the hook runs as a process
+        Then it exits 0 and writes nothing to stdout.
         """
-        source = inspect.getsource(_mod)
-        # Hook wraps main() in try/except with specific exception types
-        assert "except (json.JSONDecodeError" in source
-        assert "sys.exit(0)" in source
+        (tmp_path / "uv.lock").write_bytes(b"\xff\xfe not utf-8 [[package]")
+        result = subprocess.run(
+            [sys.executable, str(_HOOK_PATH)],
+            input="{not json",
+            capture_output=True,
+            text=True,
+            cwd=tmp_path,
+            env={"CLAUDE_PLUGIN_ROOT": str(_HOOK_PATH.parents[1])},
+            timeout=30,
+            check=False,
+        )
+        assert result.returncode == 0, result.stderr
+        assert result.stdout == ""
 
     @pytest.mark.bdd
     @pytest.mark.unit

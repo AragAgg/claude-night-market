@@ -2,7 +2,7 @@
 #
 # Interactive Authentication Module
 # Provides token caching, session management, and multi-service support
-# Requires: bash 4+ (associative arrays)
+# Requires: bash 4+ (associative arrays), jq (reads the JSON cache)
 #
 # Usage:
 #   source plugins/leyline/scripts/interactive_auth.sh
@@ -25,6 +25,39 @@ if [ "${BASH_VERSINFO[0]:-0}" -lt 4 ]; then
   printf 'interactive_auth.sh needs bash 4 or newer (found %s)\n' "${BASH_VERSION:-unknown}" >&2
   return 1 2>/dev/null || exit 1
 fi
+
+# The plugin installs without the repository's scripts/logging.sh, so this
+# stands in for its log() when the caller has loaded neither it nor a log().
+case "${__logging_loaded:-NULL}" in
+  NULL)
+    declare -F log >/dev/null ||
+      log() {
+        case "${1:-}" in
+          5) shift && printf '[CRIT]  %s\n' "${*}" >&2 ;;
+          *) printf '%s\n' "${*}" >&2 ;;
+        esac
+      }
+    ;;
+esac
+
+REQUIRED_DEPENDENCIES="jq"
+
+# Report each missing required utility; fail if any is missing.
+depcheck() {
+  local utility missing=""
+  for utility in ${REQUIRED_DEPENDENCIES}; do
+    command -v "${utility}" >/dev/null 2>&1 || missing="${missing:+"${missing} "}${utility}"
+  done
+  case "${missing}" in
+    "") return 0 ;;
+  esac
+  for utility in ${missing}; do
+    log 5 "interactive_auth.sh requires ${utility}, which is not on PATH"
+  done
+  return 1
+}
+
+depcheck || return 1 2>/dev/null || exit 1
 
 # Service-specific auth commands
 declare -A AUTH_CHECK_COMMANDS=(
@@ -87,13 +120,7 @@ read_json_value() {
   local file="${1}"
   local key="${2}"
 
-  if command -v jq &>/dev/null; then
-    jq -r --arg k "${key}" '.[$k] // empty' "${file}" 2>/dev/null
-  else
-    # Fallback: simple grep for JSON
-    grep -o "\"${key}\"\s*:\s*\"[^\"]*\"" "${file}" 2>/dev/null |
-      sed 's/.*: *"\([^"]*\)".*/\1/'
-  fi
+  jq -r --arg k "${key}" '.[$k] // empty' "${file}" 2>/dev/null
 }
 
 # ============================================================================

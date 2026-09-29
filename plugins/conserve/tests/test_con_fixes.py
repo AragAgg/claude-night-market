@@ -6,7 +6,6 @@ Each test name describes the behavior verified, not the implementation detail.
 from __future__ import annotations
 
 import importlib.util
-import inspect
 import json
 import sys
 import types
@@ -212,15 +211,24 @@ def test_get_ccr_int_setting_returns_default_on_invalid(monkeypatch):
 
 
 # ---------------------------------------------------------------------------
-# CON-001: inner _walk removed from scan_directory (uses _walk_limited only)
+# CON-001: scan_directory walks through _walk_limited (depth cap, exclusions)
 # ---------------------------------------------------------------------------
 
 
-def test_scan_directory_source_has_no_inner_walk_function():
-    source = inspect.getsource(scan_directory)
-    assert "def _walk(" not in source, (
-        "Inner _walk nested function must be removed; use _walk_limited instead"
-    )
+def test_scan_directory_skips_excluded_dirs_and_files_past_depth_limit(tmp_path):
+    (tmp_path / "main.py").write_text("print('hello')")
+    (tmp_path / "node_modules").mkdir()
+    (tmp_path / "node_modules" / "dep.js").write_text("")
+    at_limit = tmp_path.joinpath(*"abcdefgh")
+    at_limit.mkdir(parents=True)
+    (at_limit / "kept.py").write_text("")
+    past_limit = at_limit / "i"
+    past_limit.mkdir()
+    (past_limit / "dropped.py").write_text("")
+
+    result = scan_directory(tmp_path)
+
+    assert result.total_files == 2
 
 
 # ---------------------------------------------------------------------------

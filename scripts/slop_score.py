@@ -1,19 +1,14 @@
 #!/usr/bin/env python3
 """Score prose for AI slop, sourcing every pattern from the YAML.
 
-`slop-check.yml` used to carry its own `TIER1=`/`TIER2=` grep
-alternations. `plugins/scribe/data/languages/en.yaml` is documented as
-the single pattern source that `Skill(scribe:slop-detector)` loads at
-runtime, so the gate was enforcing a snapshot: every Tier 5 category
-added since was invisible to CI, and a grep alternation of bare words
-cannot express a regex category anyway.
+`plugins/scribe/data/languages/en.yaml` is the single pattern source
+that `Skill(scribe:slop-detector)` loads at runtime, and this gate reads
+the same file, so `slop-check.yml` carries no pattern list of its own.
+A category added to the YAML reaches CI with no workflow edit, which is
+the property `tests/unit/test_slop_score.py` pins.
 
-Reading the YAML means a category added there reaches CI with no
-workflow edit, which is the property `tests/unit/test_slop_score.py`
-pins.
-
-Scoring keeps the shape the workflow already reported so its threshold
-and PR comment stay meaningful: weighted hits per 100 words, tier 1
+Scoring uses the shape the workflow reports, so its threshold and PR
+comment stay meaningful: weighted hits per 100 words, tier 1
 words worth 3 and tier 2 worth 2, with each Tier 5 category worth the
 score it declares for itself. Opt-in categories stay out, matching a
 default sweep.

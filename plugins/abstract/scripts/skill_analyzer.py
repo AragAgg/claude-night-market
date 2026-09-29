@@ -289,7 +289,7 @@ class SkillAnalyzerCLI(AbstractCLI, PathArgumentMixin):
             # directory
             results = self._analyzer.analyze_directory(path, self._verbose)
             return CLIResult(success=True, data=results)
-        except Exception as e:
+        except (FileNotFoundError, OSError, ValueError) as e:
             return CLIResult(success=False, error=str(e))
 
     def format_text(self, data: Any) -> str:

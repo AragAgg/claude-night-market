@@ -566,7 +566,7 @@ class TestContextOptimizerCLIExecute:
     def test_execute_analyze_exception_returns_failure(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Execute when analyze_skill_size raises returns failure."""
+        """Execute when analyze_skill_size raises an I/O error returns failure."""
         cli = ContextOptimizerCLI()
         sf = tmp_path / "SKILL.md"
         sf.write_text("---\nname: x\n---\n\n# Skill\n")
@@ -591,7 +591,7 @@ class TestContextOptimizerCLIExecute:
         monkeypatch.setattr(
             ContextOptimizer,
             "analyze_skill_size",
-            lambda self, path: (_ for _ in ()).throw(RuntimeError("Simulated error")),
+            lambda self, path: (_ for _ in ()).throw(OSError("Simulated error")),
         )
 
         result = cli.execute(args)

@@ -56,3 +56,47 @@ def test_interactive_auth_suite_runs_to_completion(tmp_path: Path) -> None:
 
     assert result.returncode == 0, result.stdout[-2000:] + result.stderr[-2000:]
     assert "Correctly rejected unsupported service" in result.stdout
+
+
+LIBRARY = Path(__file__).resolve().parents[3] / "scripts" / "interactive_auth.sh"
+
+
+def _source(bash: str, path: str, home: Path, body: str) -> subprocess.CompletedProcess:
+    return subprocess.run(
+        [bash, "-c", f'source "{LIBRARY}" || exit 7; {body}'],
+        capture_output=True,
+        text=True,
+        timeout=30,
+        check=False,
+        env={"PATH": path, "HOME": str(home), "CI": ""},
+    )
+
+
+def test_sourcing_without_jq_reports_the_missing_dependency(tmp_path: Path) -> None:
+    """The cache stores numbers jq alone can read, so jq is required."""
+    bash = _modern_bash()
+    if bash is None:
+        pytest.skip("interactive_auth.sh needs bash 4 or newer")
+    empty_bin = tmp_path / "bin"
+    empty_bin.mkdir()
+
+    result = _source(bash, str(empty_bin), tmp_path, "exit 0")
+
+    assert result.returncode == 7
+    assert "[CRIT]" in result.stderr
+    assert "jq" in result.stderr
+
+
+def test_a_freshly_written_cache_entry_is_a_hit(tmp_path: Path) -> None:
+    """write_cache stores last_verified unquoted; check_cache must read it."""
+    bash = _modern_bash()
+    jq = shutil.which("jq")
+    if bash is None or jq is None:
+        pytest.skip("needs bash 4 or newer and jq")
+    path = f"{Path(jq).parent}:/usr/bin:/bin"
+
+    result = _source(
+        bash, path, tmp_path, "write_cache github true; check_cache github"
+    )
+
+    assert result.returncode == 0, result.stderr

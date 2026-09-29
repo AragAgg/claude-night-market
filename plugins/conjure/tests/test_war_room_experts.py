@@ -10,6 +10,7 @@ Tests expert panel configuration:
 from __future__ import annotations
 
 import asyncio
+import dataclasses
 from pathlib import Path
 from unittest.mock import patch
 
@@ -24,7 +25,6 @@ from scripts.war_room import (
     get_glm_command,
 )
 from scripts.war_room import experts as experts_module
-from scripts.war_room.experts import _COMMAND_RESOLVERS
 
 
 class TestExpertConfiguration:
@@ -48,7 +48,6 @@ class TestExpertConfiguration:
             expert = EXPERT_CONFIGS[key]
             assert expert.service == "native"
             assert expert.command is None
-            assert expert.dangerous is False
 
 
 class TestCommandResolution:
@@ -118,10 +117,9 @@ class TestCommandResolution:
         with pytest.raises(RuntimeError, match="No command configured"):
             get_expert_command(supreme)
 
-    def test_get_expert_command_resolver(self) -> None:
-        """Experts with command_resolver use dynamic resolution."""
+    def test_get_expert_command_glm_unavailable_raises(self) -> None:
+        """The GLM expert resolves its command at call time."""
         tactician = EXPERT_CONFIGS["field_tactician"]
-        assert tactician.command_resolver == "get_glm_command"
 
         # Mock shutil.which to return None for all commands to force error
         def mock_which(_cmd: str) -> None:
@@ -173,9 +171,7 @@ class TestCommandResolution:
         assert cmd == ["claude-glm", "--dangerously-skip-permissions", "-p"]
 
     def test_the_glm_expert_does_not_ask_for_the_bypass(self) -> None:
-        """`dangerous` is what carries the decision, and it is read now."""
-        assert EXPERT_CONFIGS["field_tactician"].dangerous is False
-
+        """The GLM expert's resolved command has no permission bypass."""
         with patch("shutil.which", return_value="/usr/local/bin/ccgd"):
             cmd = get_expert_command(EXPERT_CONFIGS["field_tactician"])
 
@@ -211,39 +207,45 @@ class TestCommandResolution:
                 assert "-p" in cmd
                 assert ".local/bin/claude-glm" in cmd[0]
 
-    def test_get_expert_command_invalid_resolver(self) -> None:
-        """get_expert_command raises for unknown command resolver."""
-        fake_expert = ExpertConfig(
-            role="Test Expert",
-            service="test",
-            model="test-model",
+
+class TestGlmExpertCommand:
+    """The GLM expert's argv is resolved inline and carries no bypass flag."""
+
+    @pytest.mark.parametrize(
+        ("installed", "expected_head"),
+        [("ccgd", "ccgd"), ("claude-glm", "claude-glm")],
+    )
+    def test_glm_expert_argv_is_pinned(
+        self, installed: str, expected_head: str
+    ) -> None:
+        """The resolved argv is byte-identical for each installed GLM CLI."""
+        tactician = EXPERT_CONFIGS["field_tactician"]
+
+        def which(cmd: str) -> str | None:
+            return f"/usr/local/bin/{cmd}" if cmd == installed else None
+
+        with patch("shutil.which", side_effect=which):
+            cmd = get_expert_command(tactician)
+
+        assert cmd == [expected_head, "--model", tactician.model, "-p"]
+
+    def test_any_glm_service_expert_resolves_through_glm(self) -> None:
+        """An expert whose service is glm needs no extra wiring."""
+        expert = ExpertConfig(
+            role="Other GLM",
+            service="glm",
+            model="glm-x",
             description="Test",
             phases=["test"],
-            command_resolver="nonexistent_resolver_function",
         )
+        with patch("shutil.which", return_value="/usr/local/bin/ccgd"):
+            assert get_expert_command(expert) == ["ccgd", "--model", "glm-x", "-p"]
 
-        with pytest.raises(RuntimeError, match="Unknown command resolver"):
-            get_expert_command(fake_expert)
-
-    def test_get_expert_command_resolver_returns_non_list(self) -> None:
-        """get_expert_command raises when resolver returns non-list."""
-
-        # Create a resolver that returns a string instead of list
-        def bad_resolver(**_kwargs: object) -> str:
-            return "not a list"
-
-        fake_expert = ExpertConfig(
-            role="Test Expert",
-            service="test",
-            model="test-model",
-            description="Test",
-            phases=["test"],
-            command_resolver="bad_resolver",
-        )
-
-        with patch.dict(_COMMAND_RESOLVERS, {"bad_resolver": bad_resolver}):
-            with pytest.raises(RuntimeError, match="did not return list"):
-                get_expert_command(fake_expert)
+    def test_expert_config_has_no_permission_bypass_field(self) -> None:
+        """No config field can default an expert into the bypass flag."""
+        names = {field.name for field in dataclasses.fields(ExpertConfig)}
+        assert "dangerous" not in names
+        assert "command_resolver" not in names
 
 
 class TestActivePanel:

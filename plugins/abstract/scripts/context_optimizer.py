@@ -200,7 +200,7 @@ class ContextOptimizerCLI(AbstractCLI):
                         "optimizer": optimizer,
                     },
                 )
-        except Exception as e:
+        except (FileNotFoundError, OSError, ValueError) as e:
             return CLIResult(success=False, error=str(e))
 
         # Handle unknown commands
