@@ -25,6 +25,7 @@ so the team replicates what worked and avoids what did not.
 | LL-010 | open | Review agents reported four criticals that one command refuted | 2026-09-02 |
 | LL-011 | open | A package root put PyYAML in front of every stdlib-only hook | 2026-09-22 |
 | LL-012 | open | uv run pre-commit vouched for hooks that git commit could not run | 2026-09-22 |
+| LL-013 | done | Hooks sent permission decisions Claude Code ignores | 2026-09-28 |
 
 ## Lessons
 
@@ -624,6 +625,56 @@ uv; run any entry that needs PyYAML as uv run --with pyyaml python;
 tests/test_precommit_entries_import_without_project_deps.py fails on any
 bare-python3 entry that cannot import with PyYAML blocked. Owner: night-market
 maintainers. Due: 2026-09-22. Status: done.
+
+## LL-013: Hooks sent permission decisions Claude Code ignores
+
+- Status: done
+- Date: 2026-09-28
+- Phase: review
+- Category: technology
+- Owner: night-market maintainers
+- Links: fc89f1de, a91854a2, PR #841
+<!-- key: 3ef99ac1498b -->
+
+### What happened
+
+Five imbue vow and guard hooks sent permissionDecision values "block" and
+"warn". The headless branch of tdd_bdd_gate sent a `decision` key instead of
+permissionDecision. gauntlet's pre-commit gate and memory-palace's research
+interceptor sent "allow" when they only meant to step aside or add context. A
+whole-codebase review found the headless branch by mutation testing, and the
+fix for it exposed the rest.
+
+### What went well / where we got lucky
+
+Mutation testing showed the headless branch had no test at all, and the hooks
+docs settled the question outright: they name the four valid values and say
+what happens to any other.
+
+### What did not work
+
+Claude Code passes a permissionDecision outside allow, deny, ask and defer, and
+any unrecognized key, through the normal permission flow without an error, so
+every one of these hooks exited 0, printed valid JSON, and blocked nothing.
+With VOW_SHADOW_MODE=0 no vow ever blocked. The unit tests pinned the invalid
+values, so they confirmed the defect instead of catching it. The two "allow"
+sites went the other way: they approved a commit or a web call over the user's
+own permission settings.
+
+### Root cause
+
+Hook output was tested against strings this repository chose, never against the
+documented protocol. The harness reports an ignored value or key only as a
+warning in the `claude --debug` log, which no test or session reads.
+
+### Recommendation / action item
+
+Action: vow and guard hooks emit through vow_utils.vow_output, which sends
+"deny" when enforcing and additionalContext in shadow mode, and
+tests/unit/hooks/test_vow_output_protocol.py checks the documented values.
+Context-only hooks return no decision. Follow-up: a repo-wide test that every
+PreToolUse hook's output uses only documented keys and values. Owner:
+night-market maintainers. Due: 2026-09-28. Status: done, follow-up open.
 
 ## Archive
 
