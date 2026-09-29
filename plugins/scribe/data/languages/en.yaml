@@ -321,6 +321,26 @@ tier5:
       - '\bthe reason for this is\b'
       - '\bwhich allows (?:us|you|it|them) to\b'
       - '\bit is important to note that\b'
+  so_connective:
+    # The consequence tail: a clause, a comma, then "so" and what
+    # follows from it ("the index was stale, so the lookup missed").
+    # Commit bodies here went from 0 per 1000 words in January 2026 to
+    # 8.9 in September, against 0.18 in book/src. Rules offering "so"
+    # as the fix for a semicolon splice date from 2026-06-11, before
+    # the rise.
+    #
+    # Medium confidence, surfaced and never scored: one ", so" is
+    # ordinary English, and overuse is a property of the page, which
+    # scribe.connectives.check_so_density measures. The rewrite ladder
+    # is in the slop-detector structural-patterns module. "so far",
+    # "so much", "so many", "so long as" and "so to speak" are
+    # excluded, and "so-called" never matches because a space must
+    # follow "so".
+    score: 1
+    confidence: medium
+    ignore_case: true
+    patterns:
+      - ',\s+so\s+(?!(?:far|much|many|long|to\s+speak)\b)[a-z]'
   negative_definition:
     # Behavior described only by what it will not do: "the parser
     # doesn't handle nested blocks", "the exporter does not support

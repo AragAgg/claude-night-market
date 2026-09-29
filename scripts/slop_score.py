@@ -38,6 +38,7 @@ from pathlib import Path
 _REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(_REPO_ROOT / "plugins" / "scribe" / "src"))
 
+from scribe.connectives import check_so_density
 from scribe.markdown_spans import (  # noqa: E402 - path must be set before import
     FENCED_CODE,
     INLINE_CODE,
@@ -511,7 +512,8 @@ def _audit(paths: list, allow: frozenset) -> int:
         text = _read_prose(path)
         hits = audit_text(text, allowlist=allow)
         density = check_negation_density(text)
-        if not hits and not density:
+        so_density = check_so_density(text)
+        if not hits and not density and not so_density:
             continue
         print(f"{path}")
         for hit in hits:
@@ -519,7 +521,9 @@ def _audit(paths: list, allow: frozenset) -> int:
             print(f"  {path}:{hit.line}  {hit.category}{marker}  {hit.match!r}")
         for finding in density:
             print(f"  {path}: negation density  {finding.detail}")
-        total += len(hits) + len(density)
+        for so_finding in so_density:
+            print(f"  {path}: so density  {so_finding.detail}")
+        total += len(hits) + len(density) + len(so_density)
     print(f"audited {len(paths)} files, {total} findings")
     print(
         "Findings marked (low) or (medium) are for a human to judge and are "
@@ -528,7 +532,7 @@ def _audit(paths: list, allow: frozenset) -> int:
     print(
         "A document that defines a pattern matches it. The rule files, the "
         "slop-detector modules and this catalog quote every tell they "
-        "describe, so their hits are the definition, not a defect."
+        "describe. Their hits are the definition of the pattern."
     )
     return 0
 

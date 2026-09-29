@@ -2315,3 +2315,71 @@ class TestTier5SemicolonSpliceScored:
             )
             == 0
         )
+
+
+class TestTier5SoConnective:
+    """Feature: surface the ", so" consequence tail.
+
+    "The index was stale, so the lookup missed" states a fact and then
+    appends its consequence with a comma and "so". One of these is
+    ordinary English. Measured over this repository's commit bodies the
+    rate rose from 0 per 1000 words in January 2026 to 8.9 in September,
+    against 0.18 in the curated book. The per-document overuse measure
+    is ``scribe.connectives.check_so_density``. This category marks each
+    instance for a reader to judge, at medium confidence, and never
+    scores.
+
+    Sourced from data/languages/en.yaml section tier5.so_connective.
+    """
+
+    CATEGORY = "so_connective"
+
+    @pytest.mark.unit
+    def test_category_runs_in_the_default_sweep(self) -> None:
+        patterns = load_language_patterns("en")
+        default_categories = {
+            entry["category"] for entry in get_tier5_patterns(patterns)
+        }
+        assert self.CATEGORY in default_categories
+
+    @pytest.mark.unit
+    def test_category_is_surfaced_and_never_scored(self) -> None:
+        """A single ", so" is correct English. No hit moves the gate."""
+        assert _tier5_category(self.CATEGORY)["confidence"] == "medium"
+
+    @pytest.mark.unit
+    @pytest.mark.parametrize(
+        "text",
+        [
+            "The index was stale, so the lookup missed.",
+            "The probe runs first, so a failure surfaces before the write.",
+            "Nothing modeled a sequence of stops, so nothing caught it.",
+            "The flag is off by default, so CI never sees it.",
+            "We moved the check, so that the hook fails closed.",
+            "The parser was rewritten, So the old tests fail.",
+        ],
+    )
+    def test_detects_consequence_tail(self, text: str) -> None:
+        assert _category_hits(self.CATEGORY, text) == 1
+
+    @pytest.mark.unit
+    def test_detects_a_tail_wrapped_across_lines(self) -> None:
+        text = "The cache warmed on first read,\nso later reads came from memory."
+        assert _category_hits(self.CATEGORY, text) == 1
+
+    @pytest.mark.unit
+    @pytest.mark.parametrize(
+        "text",
+        [
+            "The so-called fast path skips validation.",
+            "The results, so far, match the baseline.",
+            "It helps, so much as it helps anything.",
+            "Keep the lock, so long as the writer holds it.",
+            "The cache is, so to speak, a second index.",
+            "Move the check so that the hook fails closed.",
+            "Say so when you justify it.",
+            "If the build breaks, say so.",
+        ],
+    )
+    def test_ignores_other_uses_of_so(self, text: str) -> None:
+        assert _category_hits(self.CATEGORY, text) == 0

@@ -331,6 +331,27 @@ class TestAuditMode:
         assert "negation density" in result.stdout.lower(), result.stdout
 
     @pytest.mark.integration
+    def test_audit_reports_so_density(self, tmp_path: Path) -> None:
+        """Scenario: a page that explains every fact with ", so" is reported.
+
+        The tails are line-wrapped the way 80-column prose wraps them,
+        which checks that the audit's text path keeps the newline match.
+        """
+        doc = tmp_path / "tails.md"
+        filler = "The daemon reads the queue and writes one row per event.\n" * 60
+        tails = "The index was stale,\nso the lookup missed.\n" * 4
+        doc.write_text(filler + tails)
+        result = subprocess.run(
+            [sys.executable, str(SCRIPT), "--audit", str(tmp_path)],
+            capture_output=True,
+            text=True,
+            check=False,
+            cwd=REPO_ROOT,
+        )
+        assert "so density" in result.stdout.lower(), result.stdout
+        assert "so_connective (medium)" in result.stdout, result.stdout
+
+    @pytest.mark.integration
     def test_line_numbers_survive_a_code_fence(self, tmp_path: Path) -> None:
         """Guard: blanking code must not shift the lines that follow.
 
