@@ -87,6 +87,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   copies, and no workflow ran the drift script.
 - `run-plugin-typecheck.sh` exited 1 when no staged file sat under
   `plugins/`.
+- **Hooks emitted permission decisions Claude Code ignores** (imbue,
+  gauntlet, memory-palace). The hooks docs accept allow, deny, ask and
+  defer and pass any other value through the normal permission flow.
+  Five imbue vow and guard hooks sent "block", so enforcing mode never
+  blocked; they now send "deny", and shadow mode sends context only.
+  The headless TDD gate sent `decision` instead of `permissionDecision`
+  and never deferred under `-p`. gauntlet's pre-commit gate and
+  memory-palace's research interceptor sent "allow", approving a
+  commit or a web call over the user's own permission settings; both
+  now step aside with no decision.
+- **egregore's handoff gate read commands as substrings** (egregore).
+  `git push origin main --force`, `git -C . reset --hard`, `rm -fr`,
+  `git commit -an` and `git push origin +main` all passed, and
+  night_run runs handoff commands unattended. Commands are now read as
+  argv, and the gate also refuses `git clean -f`, worktree-discarding
+  checkout and restore, push `--mirror`/`--delete`/`:ref`,
+  `stash drop/clear`, branch `-D`/`-M`/`-C`, `checkout -B`, and
+  `-c`/`--config-env` setting `alias.*` or `core.hooksPath`.
+- **A corrupt memory-palace dedup index was overwritten** by the next
+  capture. It is now moved to `<name>.corrupt-<UTC>` first.
+- egregore's handoff documents were checked for keys, not types:
+  `acceptance: []` passed as READY and a string where a list belongs
+  crashed night_run. Both are MALFORMED now. `expect: fail` requires
+  `evidence.match`, because a mistyped test path also exits nonzero.
+- egregore `cron_for` wrote UTC fields into a cron string that
+  CronCreate reads in local time.
+- tome reported COVERED for a session in which no retrieval channel
+  ran; it reports INCONCLUSIVE.
+- egregore's scout dropped `gh` failures silently; they go to stderr
+  and a failed post raises.
+- leyline's `interactive_auth.sh` without jq read no cached value, so
+  every call re-authenticated. jq is now a checked dependency.
+- sanctum's post-implementation policy never matched plugin-scoped
+  agent names (`pensive:code-reviewer`).
 
 ## [1.9.21] - 2026-09-23
 
