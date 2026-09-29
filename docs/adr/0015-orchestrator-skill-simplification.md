@@ -18,7 +18,7 @@ The April 2026 audit identified the top four violators of AP-3
 | ``attune:war-room`` | 4 deliberation modes (Express, Lightweight, Full Council, Delphi) gated by reversibility-score formula | Hard-code one mode after collecting usage data |
 | ``imbue:feature-review`` | RICE, WSJF, AND Kano (3 frameworks where 1 would suffice) | Pick one default; others as extensions |
 
-These are publicly invoked skills, so refactoring without a
+Because these are publicly invoked skills, refactoring without a
 usage-data pass risks breaking real workflows.
 
 ## Decision

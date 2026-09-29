@@ -64,7 +64,7 @@ Two defects in the existing channel came out of the same reading:
   either matched or the function invented one, with nothing in between
   and no mark on the invented record.
 - `FIELD_ADJACENCY` had no rows for `methodology` or `ai-agents`, two
-  of the ten domains the classifier emits, so both fell through to the
+  of the ten domains the classifier emits. Both fell through to the
   `general` list.
 
 ## Decision
@@ -96,7 +96,8 @@ test that fails without it.
    words in the system description (schedule and lifecycle point at
    time, boundary and layer at space, flag and mode at condition,
    cluster and subsystem at scale) and says in `why` which words put an
-   axis first. Whole words only, so "model" does not read as "mode".
+   axis first. Matching takes whole words only, which keeps "model"
+   from reading as "mode".
    Ties keep the canonical order.
 
 4. **The swap probe reports its principle delta.** The first

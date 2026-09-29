@@ -13,7 +13,7 @@ The ``pensive`` plugin has 9 review-named skills, of which 5
 reinvent the same "Approve / Approve with actions / Block"
 scaffold verbatim. Two of them, ``pensive:shell-review`` and
 ``pensive:makefile-review``, already appear in
-``pensive:unified-review``'s dispatch table, so they are prime
+``pensive:unified-review``'s dispatch table. They are prime
 candidates to fold into unified-review as modules.
 
 ## Decision

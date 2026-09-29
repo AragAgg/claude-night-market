@@ -17,11 +17,10 @@ against the file before anything was changed:
 
 - Seventeen of the twenty-three workflows called `.filter(Boolean)` on
   their agent results (the survey counted ten; the repo guard written
-  afterward found the rest). A subagent that dies returns null, so a
+  afterward found the rest). A subagent that dies returns null. A
   crashed reviewer and a reviewer that found nothing were the same
-  thing. In
-  herald's judge panel the majority was computed over survivors, so
-  two dropped judges let the third return `complete` alone.
+  thing. In herald's judge panel, where the majority was computed over
+  survivors, two dropped judges let the third return `complete` alone.
 - No test tied a workflow's `agentType` literal to an agent file.
   Eleven scripts name plugin agents. A renamed agent degrades the
   dispatch to the default agent and the workflow reports success.
@@ -32,7 +31,7 @@ against the file before anything was changed:
   six carried no bound at all. One told the agent to resume past a
   harness stop signal.
 - attune's paradigm recommender read modifier keys the data file does
-  not use (`preferred_paradigm` in code, `preferred` in YAML), so no
+  not use (`preferred_paradigm` in code, `preferred` in YAML). No
   modifier had ever changed a recommendation, and it returned
   `confidence="high"` however close the runner-up was. The same key
   drift OctoTools' tool cards carry.
@@ -120,7 +119,7 @@ repository egregore has not been summoned in: the baseline has to be
 taken where it ran.
 
 attune's research phase was a stub: `perform_online_research` printed
-the queries and returned `{}`, so `recommend_paradigm` had never
+the queries and returned `{}`. `recommend_paradigm` had never
 received anything. The session now writes what the queries argued for
 as `{"preferred": [...], "avoid": [...]}` and passes `--research-file`;
 `rank()` applies it as a fourth modifier whose rules say "research",

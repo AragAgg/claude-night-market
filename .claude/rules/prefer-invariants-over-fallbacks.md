@@ -94,7 +94,7 @@ harness loops most threaten.
 | Karpathy, "mortal terror of exceptions" | LLMs add defensive handlers for near-impossible cases because RL punishes exceptions. The primary source for this rule's core claim |
 
 Caveats that bound these numbers: GitClear and DORA are
-observational, so they establish correlation, not causation.
+observational and establish correlation, not causation.
 Defensive bloat specifically is under-measured; duplication
 and churn are quantified, over-defensive code is mostly
 anecdotal plus Karpathy. A Google enterprise RCT (arXiv

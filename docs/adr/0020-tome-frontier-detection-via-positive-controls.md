@@ -52,7 +52,7 @@ excluded, and the exclusion is load-bearing in two directions.
 It must not be counted. `triz` generates cross-domain analogies rather
 than retrieving records of prior work. Counting its output toward the
 sparsity threshold lets the tool satisfy that threshold with text it
-wrote itself, so a topic with four invented bridges and no papers reads
+wrote itself. A topic with four invented bridges and no papers reads
 exactly like one with four papers. The verdict would then be grading
 the field on its own output, which is the failure mode the control
 mechanism exists to prevent, arriving through the denominator instead
@@ -82,7 +82,7 @@ It discriminates in one narrow band. With three retrieval channels, the
 constant changes a verdict only when exactly two are controlled-empty
 and the third holds few findings. At three empty the total is zero and
 `THIN_FIELD_CANDIDATE` fires under any threshold. At one empty the
-branch is unreachable. Most topics never enter the band, so the
+branch is unreachable. Because most topics never enter the band, the
 effective sample for tuning is far smaller than the corpus.
 
 It counts a reported subset. The threshold compares against
@@ -103,8 +103,8 @@ thin as "the bound on the signal's value". It is a property to report,
 not a defect to tune away.
 
 The matrix carries its own caveat and so does this decision: each topic
-is one recorded run from a nondeterministic, rate-limited pipeline, so
-the numbers describe the pipeline and the verdict jointly. No test
+is one recorded run from a nondeterministic, rate-limited pipeline.
+The numbers describe the pipeline and the verdict jointly. No test
 asserts against them, deliberately. A test pinning an agreement rate
 would enshrine a calibration through the back door and turn honest
 degradation into a red build.
@@ -113,14 +113,14 @@ degradation into a red build.
 
 The three targets are third-party documents, and from inside the
 verdict a moved target is indistinguishable from a broken channel: the
-control did not come back either way. The remedies are opposite, so
+control did not come back either way. Because the remedies are opposite,
 `make verify-canaries` classifies four ways rather than two, separating
 `TARGET_MOVED` (edit `canary.py`) from `CHANNEL_ERROR` (investigate the
 channel), with `RATE_LIMITED` failing nothing.
 
 It is a script rather than a test on purpose. A test's binary result
-collapses the distinction the job exists to draw, and tome's pytest
-config carries no `-m "not network"` default, so a network test would
+collapses the distinction the job exists to draw. Because tome's pytest
+config carries no `-m "not network"` default, a network test would also
 run in CI and redden the suite whenever a third party hiccuped. The
 fetch is the only network I/O under `src/tome/`, contained in
 `scripts/`, wrapping a pure classifier that tests offline.
@@ -135,7 +135,7 @@ between independent searches (Kastner et al. 2009; Webster and Kemp
 Rejected on three grounds. Tome's channels violate the independence
 assumption by construction, because Semantic Scholar ingests arXiv and
 aggregators crawl the same publishers. Positive dependence makes
-Lincoln-Petersen *underestimate* what was missed, so the bias points
+Lincoln-Petersen *underestimate* what was missed. The bias points
 toward false confidence and points hardest when channels overlap most.
 The estimator is undefined at zero overlap, and near-zero overlap is
 the regime in question. Dedup error dominates at single-digit result
@@ -143,20 +143,21 @@ counts, where systematic reviews absorb it across hundreds of records
 with human reference management.
 
 **A query-performance-prediction term in the verdict.** Every strong
-predictor (Clarity, WIG, NQC, UEF) requires a populated ranked list to
-compute a mean or a standard deviation, so all are undefined at zero
-results. That is the load-bearing fact here and it is mathematical, not
-empirical. Only the pre-retrieval family is computable in that regime,
-and it is the substantially weaker family: the survey literature
-consistently reports it as the cheaper and less accurate of the two.
-Specific correlation figures were quoted to this decision by a research
-agent that flagged its own source attribution as unverified, so they
-are deliberately not repeated. Worth using to trigger reformulation;
+predictor (Clarity, WIG, NQC, UEF) is undefined at zero results,
+because each requires a populated ranked list to compute a mean or a
+standard deviation. That is the load-bearing fact here and it is
+mathematical, not empirical. Only the pre-retrieval family is
+computable in that regime, and it is the substantially weaker family:
+the survey literature consistently reports it as the cheaper and less
+accurate of the two.
+Specific correlation figures quoted to this decision are deliberately
+not repeated: the research agent that supplied them flagged its own
+source attribution as unverified. Worth using to trigger reformulation;
 not worth grading a finding with.
 
 **A fourth term inside `compute_quality_score`.** Every existing term
-measures the search, so a blend cannot separate a thin field from a
-broken one however it is weighted. The distinction needs a categorical
+measures the search. No blend of them, however it is weighted, can
+separate a thin field from a broken one. The distinction needs a categorical
 verdict beside the score, not another continuous dimension. For the
 same reason the score is deliberately kept out of the report: printing
 a search-quality number next to a field-quality verdict invites the

@@ -55,7 +55,7 @@ reader of 4000 parses over a 49-skill seed:
 | [E2] after | 49/49 | 800/800 | 0/4000 |
 
 This is synthetic stress. The live file holds 353 accuracies against
-352 logged events, so no wipe has happened there yet.
+352 logged events. No wipe has happened there yet.
 
 ## Decision
 
@@ -76,8 +76,8 @@ Windows, and `leyline/quota_tracker.py` already imports it unguarded.
 
 The one frequency reader today is the `skill-improver` agent, which
 prints an execution count for the last 30 days in each proposal. It
-needs a count, and the count already exists. No code ranks skills by
-recency or keeps a hot set, so none of the following is code yet. The
+needs a count, and the count already exists. None of the following is
+code yet: no code ranks skills by recency or keeps a hot set. The
 first consumer that needs it should start here.
 
 - Keep an exact count and a last-seen timestamp per key, scored in the
@@ -85,7 +85,8 @@ first consumer that needs it should start here.
   approximate counter below a few thousand keys.
 - If a small hot set is ever shown to users, use the paper's two
   thresholds as a hysteresis band. Enter above the high score and leave
-  only below the low one, so skills ranked near the cutoff stay put.
+  only below the low one. The gap keeps skills ranked near the cutoff
+  in place.
   Segmented LRU uses the same split between probation and protection.
 - For the last K events, read the JSONL file backwards in blocks from
   the end. For events since a time, open only the date-named files on

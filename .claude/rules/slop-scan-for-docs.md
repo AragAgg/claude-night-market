@@ -68,9 +68,9 @@ the failure mode worth catching.
 Full rubric, table, and worked example:
 `Skill(scribe:slop-detector)` module `document-economy.md`.
 
-Audience fit is judgment, not a string in the text, so no
-regex can decide it and nothing is added to `en.yaml` for
-it. The guard is the contract test
+Audience fit is judgment that no string in the text reveals.
+No regex can decide it, and nothing is added to `en.yaml`
+for it. The guard is the contract test
 `plugins/scribe/tests/test_audience_targeting.py`.
 
 ## Layer 2: Sentence-level checks
@@ -96,12 +96,12 @@ one.
 
 `--python` adds `.py` files to a directory sweep and scores their
 comments and docstrings, which is where half of this behavior lives. A
-`.py` path named directly is always read that way, so a caller passing
-a file list needs no flag.
+caller passing a file list needs no flag: a `.py` path named directly is
+always read that way.
 
 A Python score is floored at 150 words, because under that the number
 measures its denominator. The score is weighted hits per 100 words and
-a tier 1 hit is worth 3, so a module with 14 words of docstring and one
+a tier 1 hit is worth 3. A module with 14 words of docstring and one
 finding scored 21.43 against 1.55 for a 1029-word ADR carrying twelve.
 150 is the lowest floor at which every surviving file in a six-plugin
 sweep carries at least three findings. The floor gates only: `--audit`
@@ -253,9 +253,9 @@ list above.
 **These are not repo-local rules.** Every category below is
 implemented as a `tier5.*` section in
 `plugins/scribe/data/languages/en.yaml`, which is the pattern
-source `Skill(scribe:slop-detector)` loads at runtime. A
-document scanned in any other codebase gets the same findings,
-so remediation is portable rather than tied to this repository.
+source `Skill(scribe:slop-detector)` loads at runtime.
+Remediation is portable rather than tied to this repository: a
+document scanned in any other codebase gets the same findings.
 The list below is the human-readable rationale and the rewrite
 guidance. The YAML is the enforcement. When adding a pattern
 here, add it there too, with a test in
@@ -268,10 +268,10 @@ ever apply to this repo.
   "boasts", "marks" (a turning point), "represents" (a shift)
   with plain "is", "has", "uses", or delete. Heuristic: if
   the subject cannot literally do the verb, the verb is slop.
-  The bare and plural forms are already matched: the regex uses
-  `lives?`, `sits?`, `stands?`, `rests?`, `dwells?`, so "the
-  configs live in the repo root" and "adapters sit between the
-  layers" fire the same as the inflected forms. No separate
+  The regex uses `lives?`, `sits?`, `stands?`, `rests?`,
+  `dwells?`, which already matches the bare and plural forms:
+  "the configs live in the repo root" and "adapters sit between
+  the layers" fire the same as the inflected forms. No separate
   pattern is needed for them.
 - **Anthropomorphism (non-human subjects)**: the spatial copula
   bullet covers putting a body somewhere. This covers giving code,
@@ -315,10 +315,10 @@ ever apply to this repo.
   confidence, and the reason is worth keeping: no source in the
   contrastive-negation literature names either connective, and this
   repository writes "rather than" 504 times and "instead of" 299,
-  almost all correctly, these rule files included. Scoped to the
-  verb-phrase form, so a noun comparison ("use rg rather than grep")
-  stays untouched. Enable it for a documentation audit, surface every
-  hit, never auto-rewrite. The negated form is different and is
+  almost all correctly, these rule files included. The pattern is
+  scoped to the verb-phrase form and leaves a noun comparison ("use rg
+  rather than grep") untouched. Enable it for a documentation audit,
+  surface every hit, never auto-rewrite. The negated form is different and is
   scored: `negated_alternative` matches a negation followed in the
   same clause by either connective ("never guesses instead of
   measuring", "does not retry rather than report"). A recommendation
@@ -370,7 +370,7 @@ ever apply to this repo.
   BLOCKED work to be stated. A blanket rule against saying what was
   not done contradicts the harness and loses to it, which is what the
   practitioner reports behind this category describe. A file has no
-  session to report on, so the rule applies to written artifacts and
+  session to report on. The rule applies to written artifacts and
   stops there. Same resolution `ste-for-operator-and-procedures.md`
   performs for sentence length: by scope, not by precedence.
 

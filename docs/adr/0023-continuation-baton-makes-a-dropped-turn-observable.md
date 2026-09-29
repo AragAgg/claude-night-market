@@ -11,13 +11,13 @@
 
 ADR-0022 records that egregore continues across turns by riding an
 undocumented harness behavior, and closes with the part nobody could
-act on: no test can cover the harness end of it, so the first symptom
-of an upstream change is a loop that stops after one turn.
+act on: because no test can cover the harness end of it, the first
+symptom of an upstream change is a loop that stops after one turn.
 
 That last clause is a detection problem rather than a dependency
 problem. A loop that stopped after one turn and a loop that finished
 its work produce the same observation from outside: a session that is
-no longer running. The watchdog cannot tell them apart, so it polls a
+no longer running. Unable to tell them apart, the watchdog polls a
 static fact instead, whether the manifest still holds active items,
 and relaunches on that. The completion signal never crosses out of the
 session at all.
@@ -53,7 +53,7 @@ across the boundary.
 
 | Field | Analogue | What it contributes | Confidence |
 |-------|----------|---------------------|-----------|
-| Rail engineering | Dead man's control: the driver holds a lever, and releasing it brakes the train | Liveness is proved by a positive repeated act, so the *absence* of the act is the signal. Inverts polling from "is there work" to "did an expected act fail to happen" | High |
+| Rail engineering | Dead man's control: the driver holds a lever, and releasing it brakes the train | Liveness is proved by a positive repeated act. The *absence* of the act is the signal. Inverts polling from "is there work" to "did an expected act fail to happen" | High |
 | Cell biology | Cell-cycle checkpoint: no central clock authorizes division, a state is written and downstream machinery reads it | The producer writes the state at the moment it is true; the consumer is decoupled and may be absent | Medium-high |
 | Logistics | Kanban card: work is pulled, not pushed on a schedule, and the card outlives whoever placed it | The artifact is the handoff. Its presence and its collection are both meaningful | Medium-high |
 
@@ -77,7 +77,7 @@ The load-bearing property, and the one the tests pin hardest:
 healthy at any age, because each turn set a new deadline. A baton
 written seconds ago is stranded the instant its own deadline passes
 with no successor. An external watcher therefore still polls on a
-clock but *acts* on a written fact, so relaunch latency is the grace
+clock but *acts* on a written fact. Relaunch latency is the grace
 period the session chose rather than the poll interval.
 
 Four states become distinguishable where the pidfile distinguished
@@ -94,8 +94,8 @@ The third row had no observation at all before this, which is the
 detection gap ADR-0022 named.
 
 A relaunch also carries the session's own `next_prompt` rather than
-the watchdog's generic fallback, so a resumed session does not
-rediscover what it was doing.
+the watchdog's generic fallback, which spares a resumed session from
+rediscovering what it was doing.
 
 ## What this does not change
 

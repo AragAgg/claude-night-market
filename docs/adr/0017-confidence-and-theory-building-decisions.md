@@ -50,8 +50,8 @@ confidence tags. The reasons are concrete, not provisional.
 - **No surgical enforcement path.** Every operational form in
   ADR-0012 is large or imprecise: a hook scanner (low precision),
   an output-style retrain (broad prose disruption), or a per-claim
-  style mandate (conversational-tone damage). None is a small,
-  reversible edit, so none clears the bar for a framework-wide
+  style mandate (conversational-tone damage). Because none is a
+  small, reversible edit, none clears the bar for a framework-wide
   default.
 
 Voluntary adoption is allowed and encouraged where it is cheap and
@@ -64,10 +64,10 @@ remains the canonical, enforced defense.
 ### Decision 2: Theory-building: adopt the lightest form
 
 **Adopt the senior-engineer self-check as the theory-building
-form: a single optional recommendation, no hard gate. Wiring it
-into ``imbue:karpathy-principles`` is tracked separately (see the
-acceptance criteria below), so this ADR records the decision, not
-a completed skill change.**
+form: a single optional recommendation, no hard gate. This ADR
+records the decision, not a completed skill change: wiring it into
+``imbue:karpathy-principles`` is tracked separately (see the
+acceptance criteria below).**
 
 The adopted form is the single self-check question:
 
@@ -81,9 +81,9 @@ hand.
 
 Why this form over the alternatives in ADR-0013:
 
-- It is the cheapest. It adds zero output tokens and no ceremony,
-  so it avoids the "formulaic narrative" failure mode that the
-  2-sentence-summary variant risks.
+- It is the cheapest. With zero added output tokens and no
+  ceremony, it avoids the "formulaic narrative" failure mode that
+  the 2-sentence-summary variant risks.
 - It targets the actual concern (human comprehension) directly,
   rather than proxying it through commit-authorship ratios that
   are hard to define and easy to game.
@@ -113,7 +113,7 @@ live. Nothing fails CI for skipping it.
 
 ### Negative
 
-- Neither pattern is enforced, so neither is guaranteed to be
+- Neither pattern is enforced, and neither is guaranteed to be
   applied. We accept this: enforcement cost exceeds expected
   benefit for both, given current evidence.
 - A future change in evidence (a low-false-positive tagger, or

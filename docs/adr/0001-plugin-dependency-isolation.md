@@ -68,7 +68,7 @@ through sys.path injection inside a try/except and is inert when gauntlet
 is absent. The same rules as leyline, abstract and herald apply. The edge
 was implemented before it was recorded; cartograph's plugin.json now
 declares it, as egregore's declares herald and minister's declares
-leyline, so the manifest says what the code does.
+leyline. The manifest says what the code does.
 
 ## Architecture
 

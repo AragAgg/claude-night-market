@@ -32,7 +32,7 @@ Simple tenses only. No contractions. No semicolons (rule 8.1).
 American spelling, already enforced by `scribe.spelling`.
 
 **Vocabulary rules are not adopted and cannot be.** The ASD controlled
-dictionary is copyright and is not redistributable, so no approved-word
+dictionary is copyright and is not redistributable. No approved-word
 list ships here. Never describe any output as STE compliant or
 certified. ASD does not endorse or certify sellers of tools claimed to
 be fully compliant.
@@ -59,8 +59,8 @@ procedure someone follows at 3 a.m.
 off by default, because measured across this repository they fire on
 most files, and a check that noisy stops being run.
 
-Noun-cluster findings are advisory. Detection has no part-of-speech
-tagger, so it fires on 76% of files. Reread what it points at. Never
+Noun-cluster findings are advisory. Without a part-of-speech tagger,
+detection fires on 76% of files. Reread what it points at. Never
 rewrite on it and never gate a merge on it.
 
 **Full reference:** `Skill(scribe:simplified-technical-english)` and its

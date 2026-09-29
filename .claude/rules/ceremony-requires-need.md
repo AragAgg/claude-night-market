@@ -32,8 +32,8 @@ wire.
 A **versioned request DTO is justified** whenever the systems exchanging it
 do not deploy atomically: it lets you serve a new shape and the old one at
 once, and migrate systems one at a time. That is a deployment constraint,
-not a DDD principle. Say so when you justify it, so the next reader knows
-which force put it there and when it can go.
+not a DDD principle. Say so when you justify it so that the next reader
+knows which force put it there and when it can go.
 
 A mapper at an IO boundary is load-bearing even when it looks like a
 passthrough today. Do not delete it.
@@ -81,5 +81,5 @@ Do not. Neither answer is more or less DDD than the other.
   the review lens.
 - `plugins/archetypes/tests/test_ddd_paradigm.py` and
   `plugins/pensive/tests/skills/test_ceremony_audit.py`: the contract.
-  Each assertion anchors on a clause unique to the passage it guards, so
-  deleting that passage turns the test red.
+  Each assertion anchors on a clause unique to the passage it guards.
+  Deleting that passage turns the test red.

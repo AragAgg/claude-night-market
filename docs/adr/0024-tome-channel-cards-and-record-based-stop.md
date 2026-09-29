@@ -91,9 +91,9 @@ verifier. Four problems came up:
 
 | # | What happened | Disposition |
 |---|---------------|-------------|
-| F1 | A topic about TRIZ frameworks classified `general` at 0.33, so the plan dropped `triz` | Fixed in pass 2: a `methodology` domain (deep, academic and triz weighted) and agent-framework terms under `ai-agents`. The topic now refines to both at deep depth |
+| F1 | The plan dropped `triz` after a topic about TRIZ frameworks classified `general` at 0.33 | Fixed in pass 2: a `methodology` domain (deep, academic and triz weighted) and agent-framework terms under `ai-agents`. The topic now refines to both at deep depth |
 | F2 | The dispatch prompt dictated `{"findings", "queries"}`, the agent obeyed it over its own file, and 27 query records, a canary among them, collapsed into one synthesized log | Fixed twice: the rendered card points at the agent's documented envelope, and the parser reads a top-level `queries` list |
-| F3 | An agent put relevance notes in `error`, so working queries counted as failed and the channel read `degraded` | Parser left strict, since the error runs toward INCONCLUSIVE. The card now says `error` is for failed queries only |
+| F3 | Relevance notes an agent put in `error` counted working queries as failed, and the channel read `degraded` | Parser left strict, since the error runs toward INCONCLUSIVE. The card now says `error` is for failed queries only |
 | F4 | The triz helper fell back to "flexibility vs complexity" for all four real contradictions | Fixed in pass 2: four workflow pairs in the catalogue with principles from the triz pass, and `formulate_contradictions` returns ranked candidates |
 
 F3 also shows the verifier doing its job: on that session it returned
@@ -175,8 +175,8 @@ downward: dialectical inquiry, and the Evaporating Cloud.
 
 - A fifth channel needs a card, and the tests list what else must
   change with it. `Finding` still validates against `_VALID_CHANNELS`.
-  The cards restate that set rather than own it, so `models` does not
-  import the card module.
+  The cards restate that set rather than own it, which keeps `models`
+  from importing the card module.
 - A session can run a second pass, and the reason for it is written
   down. A pass cut off by the budget reports its gaps.
 - The rendered card adds 100 to 130 words (about 210 tokens) to each
@@ -189,20 +189,20 @@ downward: dialectical inquiry, and the Evaporating Cloud.
 The verifier asked for a second pass, and the first pass had never
 sent the code and discourse channels. Pass 2 sent code, discourse and
 academic, each prompt carrying its rendered card. This is what the
-cards were built to do, so the pass doubled as their first measurement.
+cards were built to do. The pass doubled as their first measurement.
 
 **What the card changed, measured.** With the card pointing at the
 agent's envelope file, the code agent returned prose and no envelope;
 the discourse and academic agents returned the documented envelope. One
 in three. The code agent also built fourteen of its fifteen queries as
-free text against the card's best practice. A pointer is not an
-instruction, so `render_card` now states the output contract inline:
+free text against the card's best practice. Because a pointer is not an
+instruction, `render_card` now states the output contract inline:
 the final message is one fenced JSON block. That is the second fix for
 F2, and unlike the first it follows an observed failure. The query
 construction finding is open. Two other findings came from reading the
-records: WebFetch refuses `old.reddit.com` in Claude Code, so the
-discourse card now names Reddit as a dead source, and Unpaywall answers
-422 to tome's placeholder address, so `build_unpaywall_url` now needs a
+records. The discourse card now names Reddit as a dead source, because
+WebFetch refuses `old.reddit.com` in Claude Code. Unpaywall answers 422
+to tome's placeholder address, and `build_unpaywall_url` now needs a
 real one from `TOME_CONTACT_EMAIL`.
 
 **Session record.** Six envelopes over two passes, 95 findings merged
@@ -226,7 +226,7 @@ Hacker News: "a cargo cult, painting by numbers for engineers", and
 that applying the principles to software takes enough creativity that
 they work "only as a form of provocation like Eno's oblique
 strategies". Scores measure attention, and the card says so, but the
-claim matches the academic record below, so the triz card's `when`
+claim matches the academic record below. The triz card's `when`
 stands and the ADR states the position: tome's TRIZ channel is a
 provocation source, and the ideation catalog grades it `mixed` on the
 strength of design-by-analogy experiments, not of TRIZ trials.
@@ -242,7 +242,7 @@ Nothing was added to the ideation catalog from this pass.
 Two LLM-plus-TRIZ results changed code. TRIZ-GPT (arXiv 2408.05897,
 ASME IDETC 2024) measured GPT-4 mapping free text onto contradiction
 parameters at recall 0.69 and precision 0.31, about three candidates
-per correct pair, so `formulate_contradictions` now returns the ranked
+per correct pair. `formulate_contradictions` now returns the ranked
 few and the triz agent searches from each that fits. Terwiesch et al.
 (arXiv 2607.27553) found LLM idea sets less diverse than human sets
 across three prior datasets, with structural prompt variation restoring
@@ -254,10 +254,10 @@ and TRIZ-RAGNER (arXiv 2602.23656) reached F1 84.2 on patent
 contradiction extraction, which measures reading of existing text.
 Both are noted, neither changed code.
 
-**Open after pass 2.** `workflows/research.js` dispatches with its own
-briefs and no card, so nothing on that path sees the Reddit limitation
-or the inline output contract; its agent files carry the Reddit fact
-instead. Card best practices did not change how the code agent built
+**Open after pass 2.** Nothing on the `workflows/research.js` path sees
+the Reddit limitation or the inline output contract, because it
+dispatches with its own briefs and no card. Its agent files carry the
+Reddit fact instead. Card best practices did not change how the code agent built
 queries (n=1). Whether the inline output contract holds is
 unmeasured until the next dispatch. The two degraded channels are gaps
 in the record, not in the field.

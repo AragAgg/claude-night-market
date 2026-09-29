@@ -96,7 +96,7 @@ unified view glob both directories and decode the envelope.
 
 - Downstream readers can iterate both directories with one parser.
 - ``schema_version`` gives a clean forward-compatibility hatch.
-- Disk format remains JSON (one envelope per file), so existing
+- Because disk format remains JSON (one envelope per file), existing
   shell-based inspection (``jq``, ``cat``) keeps working.
 - No migration required for legacy files.
 
