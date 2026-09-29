@@ -88,7 +88,7 @@ module names across plugins force the per-plugin split.
 **Grand total**: 20,992.
 
 Counts are `pytest --collect-only` output on 2026-08-25, not
-estimates. They drift, so re-measure before quoting them:
+estimates. They drift. Re-measure before quoting them:
 
 ```bash
 for p in plugins/*/; do

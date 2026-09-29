@@ -223,7 +223,7 @@ reading as though they tightened five.
 
 The gates resolve each file against its own plugin's config, so
 `make lint`, the pre-commit ruff check hooks, and `lint.yml` pass no
-`--config`. Only `ruff format` keeps the root config, so formatting
+`--config`. Only `ruff format` keeps the root config. Formatting
 stays uniform repo-wide while the rule set varies by plugin.
 
 `scripts/check_per_file_ignores.py` audits new suppressions and reads
@@ -275,7 +275,7 @@ line inside a fenced block.
 A citation resolves against the root Makefile, the root's generated
 `<plugin>` and `<plugin>-<target>` delegation, or the Makefile of the
 plugin that owns the document. Scoping to the owner is what gives the
-gate its reach. Two plugins define `format`, so an "exists in some
+gate its reach. Because two plugins define `format`, an "exists in some
 Makefile" check would have passed the `make format` citation that
 motivated the gate. Targets named inside a worked example
 describing another project's Makefile are allowlisted, and a second test
@@ -284,8 +284,8 @@ fails if an allowlisted target ever becomes real.
 `tests/test_cited_paths_resolve.py` covers the other three citation
 forms: backticked file paths, `plugin:name` capabilities, and
 `Skill(plugin:name)` calls. A make target slipped between the first
-two: it carries no slash, so the path gate did not recognize it as a
-token, and no colon, so the capability gate ignored it.
+two. It carries no slash for the path gate to recognize as a token and
+no colon for the capability gate to match.
 
 ### Invoked Skills Must Be Callable
 
@@ -485,8 +485,8 @@ been clarified and scoped.
 `egregore:quality-gate` is the proposed home for the
 sequence above. It already runs the QUALITY pipeline stage,
 declares routing tables per step, works in both self-review
-and PR-review modes, and is invoked from `egregore:summon`,
-so every autonomous mission would inherit the same gate
+and PR-review modes, and is invoked from `egregore:summon`.
+Every autonomous mission would inherit the same gate
 discipline. The step it would add is
 `imbue:vow-enforcement`, which today is a hook target with
 no `Skill()` entry path.

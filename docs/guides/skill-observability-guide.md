@@ -83,7 +83,7 @@ accuracy variance.
 The system adds approximately 2-5ms of overhead for state writing in the
 PreToolUse hook and 10-20ms for metric calculation in the PostToolUse hook.
 Total latency remains under 25ms per tool use.
-Logs grow linearly, so implement a retention policy if a single skill exceeds
+Logs grow linearly. Implement a retention policy if a single skill exceeds
 10,000 daily executions to prevent performance degradation during log scanning.
 
 ## Verification

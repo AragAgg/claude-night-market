@@ -90,8 +90,8 @@ the dimension the tiered/on-condition design most directly moves.
 | Graph-escalation rate | fraction of queries that hit the expensive graph path | new |
 | Retrieval latency p50/p95 | per-query timing | new |
 
-**Guardrail.** Report cost-per-quality (tokens per unit nDCG gain), not
-raw speed, so a fast-but-useless run does not look good.
+**Guardrail.** Report cost-per-quality (tokens per unit nDCG gain). Raw
+speed alone makes a fast-but-useless run look good.
 
 ## Dimension 5: Impact
 
@@ -144,8 +144,8 @@ to five.
 
 - **Gold set.** A fixed panel of arXiv topics with hand-labeled
   relevant papers (seeded from BEIR SciFact/SciDocs plus a small
-  in-repo set), committed under `tests/fixtures/`, so nDCG/MRR/recall
-  are reproducible offline with no network and no LLM.
+  in-repo set), committed under `tests/fixtures/`. The fixtures keep
+  nDCG/MRR/recall reproducible offline with no network and no LLM.
 - **Before/after protocol.** Run the same topics through the current
   pipeline and the upgraded one; report the per-dimension delta. A
   metric that does not move on the benchmark does not justify its code.

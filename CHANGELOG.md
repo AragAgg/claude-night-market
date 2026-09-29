@@ -54,10 +54,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Fan-outs report what they dropped; scanners prove they can see
   (all plugins).** Seventeen of twenty-three workflows filtered null
-  agent results away, so a crashed reviewer and one that found
-  nothing were the same thing; herald's judge panel counted its
-  majority over survivors, so two dropped judges let the third
-  decide alone. Every fan-out now returns the items it dropped
+  agent results away, and a crashed reviewer and one that found
+  nothing were the same thing to them. herald's judge panel counted its
+  majority over survivors. Two dropped judges let the third decide
+  alone. Every fan-out now returns the items it dropped
   (`missing`, `unread`, `unscored`, `unchecked`) and logs them, the
   panel divides by its roster and returns `inconclusive` with a judge
   missing, and a repo test fails any script that filters nulls
@@ -77,7 +77,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   palaces indexed" instead of "No matches found".
 
   attune's paradigm recommender read modifier keys its data file does
-  not use, so no project-type, scalability or security modifier had
+  not use. No project-type, scalability or security modifier had
   ever changed a recommendation, and it reported `confidence="high"`
   regardless of margin. `rank()` scores every candidate with the
   data's own keys and names the rule behind each point; `recommend()`
@@ -93,8 +93,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   at two and handoffs at depth 3. The mission iteration governor caps
   restarts at two. Survey and decisions: ADR-0025.
 
-  attune's `arch-init` research phase printed its queries and returned
-  nothing, so the "selects via research" claim had no code behind it.
+  attune's `arch-init` research phase, the code behind the "selects via
+  research" claim, printed its queries and returned nothing.
   `--research-file` now takes the session's `preferred` and `avoid`
   lists and the ranker scores them beside the other modifiers, naming
   "research" in the rationale. memory-palace's unreferenced
@@ -119,7 +119,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   set in `models`, an if-ladder in the planner, the research skill's
   dispatch table, and ADR prose. No limitation ever reached an
   agent's prompt. The pieces of a stop decision existed and nothing
-  combined them, so a session ran one pass and `replan` had no
+  combined them. A session ran one pass, and `replan` had no
   caller. OctoTools (arXiv 2502.11271) solves the same shape with
   tool cards and a context verifier, and this adapts both.
 
@@ -149,7 +149,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
   A second pass, run through tome with the cards embedded, measured
   them: one agent in three ignored a card that only pointed at its
-  envelope file, so the card now states the output contract inline.
+  envelope file. The card now states the output contract inline.
   The pass also filled the two vocabulary gaps the first pass found.
   A `methodology` domain classifies inventive-method topics at
   deep depth, `ai-agents` recognizes planner, verifier and toolset
@@ -159,26 +159,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   instead of the first keyword hit, because TRIZ-GPT
   (arXiv 2408.05897) measured that mapping at about three candidates
   per correct pair.
-  `formulate_contradiction` now returns the candidate with the most
-  keyword support rather than the first catalogue entry that matched,
-  so a topic hitting two pairs can change its top pair.
+  A topic hitting two pairs can now change its top pair:
+  `formulate_contradiction` returns the candidate with the most
+  keyword support rather than the first catalog entry that matched.
 
 - **Open-web search channel (tome).** The research channels covered
   GitHub, community forums, academia, and TRIZ, but vendor
   documentation, comparisons, standards, and news had no channel:
   a session either missed those pages or an agent improvised
   freehand queries. `tome:web-search` is that channel. It runs through the You.com MCP server (`you-search`) when
-  configured, and falls back to the built-in WebSearch tool when it
-  is not, so the channel works with zero setup and no new dependency.
+  configured. Its fallback to the built-in WebSearch tool when it is
+  not lets the channel work with zero setup and no new dependency.
   Query expansion, result parsers, and ranking live in
   `tome.channels.web`, following the same no-HTTP-call pattern as
   the other channels. It joins the research fan-out in this release:
   a `web` channel card dispatches `tome:web-searcher` from medium
   depth, the agent runs a positive control (RFC 2119, verified
   2026-09-18) before its topic queries, and `web` is in
-  `RETRIEVAL_CHANNELS`, so its silence counts in the coverage verdict
-  the way the other three channels' does. The You.com parser reports
-  how many returned items it dropped, so a drifted response shape
+  `RETRIEVAL_CHANNELS`, where its silence counts in the coverage
+  verdict the way the other three channels' does. The You.com parser
+  reports how many returned items it dropped. A drifted response shape
   cannot read as an empty web.
 
 - **Vendored leyline copies** (sanctum, gauntlet, memory-palace).
@@ -188,8 +188,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Three of the five hand-kept copies were pinned by nothing.
 - **Count ceiling for `plugins/` slop.** `slop_score.py --max-over N`
   fails when more than N files exceed the threshold, and CI holds
-  `plugins/` at 21. The changed-file ratchet never re-scores a file no
-  one edits, so a scorer change could push untouched files over.
+  `plugins/` at 21. Because the changed-file ratchet never re-scores a
+  file no one edits, a scorer change could push untouched files over.
 - **Shell `main()` ratchet.** An executable script without `main()`
   fails unless it is on an allowlist that can only shrink.
 
@@ -209,15 +209,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Dependency floors raised to what the lock files already resolve.**
   159 floors across the 24 `pyproject.toml` files now name the newest
-  release that still installs on each file's own `requires-python`,
-  so a 3.9 plugin floors at coverage 7.10.7 and bandit 1.8.6 while
+  release that still installs on each file's own `requires-python`.
+  A 3.9 plugin floors at coverage 7.10.7 and bandit 1.8.6 while
   the 3.12 root takes 7.16.1 and 1.9.4. Every cap and marker is kept,
   pytest stays below 9 and mypy below 2 (both need Python 3.10), and
   ruff 0.16.8 is declared in the three plugins that configured it
   without depending on it (archetypes, cartograph, scry).
 
 - **Python 3.9 gate uses FA102** (CI). The UP007 step exited 0 on
-  `int | None` at py39, so it could not fail. FA102 is also in the
+  `int | None` at py39 and could not fail. FA102 is also in the
   root ruff `select`, which catches the same thing at edit time.
 - **Plugin lists derive from the tree** (CI, pre-commit). One
   `validate-plugins` hook replaces 19 per-plugin hooks that missed
@@ -241,9 +241,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   holds `FENCED_CODE` and `URL` for spelling, negation, ste and
   `slop_score.py`. `sanctum/commands/commit-msg.md` scores 14.43 where
   it scored 13.41, from the stricter fence.
-- **memory-palace capture hooks share `render_frontmatter`.** Every
-  string field is written quoted, so a session id or title holding
-  `: ` or `#` no longer makes the entry unparseable.
+- **memory-palace capture hooks share `render_frontmatter`.** A
+  session id or title holding `: ` or `#` no longer makes the entry
+  unparseable: every string field is written quoted.
 - **skills-eval rewards intent, constraints and exit criteria**
   (abstract). The rubric had scored rationalization tables,
   commitment declarations and "YOU MUST" wording as positives, which
@@ -281,7 +281,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **`/pr-review` insights post from a `--local` report, under plain
   `python3`** (abstract). `post_review_insights.py` read only the
-  `## Blocking findings` and NB-table layout, so a report written from
+  `## Blocking findings` and NB-table layout. A report written from
   the pr-review template posted nothing. It now also reads the
   template's `### Blocking`, `### In-Scope` and `### Suggestions`
   items. The script also died with `ModuleNotFoundError: yaml` because
@@ -312,12 +312,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   imports every remaining bare-`python3` entry with PyYAML blocked.
 - **Four hooks could not import under the interpreter that runs
   them.** Hooks execute under whatever `python3` the operator's PATH
-  resolves, which carries the standard library and nothing else, so a
-  module-scope dependency raises before the payload is read.
+  resolves, which carries the standard library and nothing else. A
+  module-scope dependency raises there before the payload is read.
   `hookify/rule_guard.py` imported PyYAML at module scope and raised
   a traceback on every Bash call, prompt and stop. When PyYAML is
   absent its loader now reads rule frontmatter with a stdlib parser
-  (plain and quoted scalars plus the `conditions:` list), so block
+  (plain and quoted scalars plus the `conditions:` list). Block
   rules still block, and a rule that parser cannot read is named in
   the hook's `systemMessage`. That registration is new on this branch
   and never shipped. The `abstract` path helpers moved to a
@@ -325,7 +325,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   are unchanged, and both `abstract` and `memory_palace.corpus` now
   resolve their package-root exports on first access.
   `tests/test_hooks_import_without_project_deps.py` imports all 53
-  registered hooks with PyYAML blocked, so the class cannot return.
+  registered hooks with PyYAML blocked and fails if the class returns.
 - **Every session start printed a traceback instead of running the
   memory-palace capture surfacer.** The `index_surfacer` SessionStart
   hook needs one name, `persistent_root` from `memory_palace.paths`,
@@ -333,13 +333,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and that file eagerly imported `EmbeddingIndex`, which pulls in the
   corpus package and PyYAML. Hooks run under whatever `python3` the
   operator's PATH resolves, an interpreter with no project
-  dependencies installed, so the import raised `ModuleNotFoundError`
+  dependencies installed. There the import raised `ModuleNotFoundError`
   before the hook read its payload. The package root now resolves
   every export on first attribute access, extending the pattern it
   already applied to the networkx-backed `PalaceGraphAnalyzer`.
 - **`run-plugin-tests.sh` no longer fails its EXIT trap when nothing
-  is staged.** bash 3.2 treats an empty array as unset under `set -u`,
-  so the temp-file cleanup aborted with `_TEMP_FILES[@]: unbound
+  is staged.** Because bash 3.2 treats an empty array as unset under
+  `set -u`, the temp-file cleanup aborted with `_TEMP_FILES[@]: unbound
   variable` and the pre-commit hook showed red on every empty-index
   run. The expansion is now guarded like `cov_flag` already was.
 
@@ -352,17 +352,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `metadata.queries` still wins when both are present.
 - **`build_unpaywall_url` no longer sends a placeholder address
   (tome).** Unpaywall answers 422 to `research@example.com`, which was
-  the default, so every lookup failed and the agent could not say
+  the default. Every lookup failed, and the agent could not say
   why. The address now comes from `email=` or `TOME_CONTACT_EMAIL`,
   and the builder raises without one.
-- **The discourse card names Reddit as unreachable (tome).** WebFetch
-  refuses `old.reddit.com` in Claude Code, so the subreddit source
+- **The discourse card names Reddit as unreachable (tome).** Because
+  WebFetch refuses `old.reddit.com` in Claude Code, the subreddit source
   returned nothing on every run and read as an empty result. The
   card tells the agent to record it as a `source_error`.
 
 - `to_american` rewrote spellings inside `~~~` fences.
-- `ecosystem-tests.yml` skipped PRs touching only `plugins/*/hooks/**`
-  or `plugins/*/src/**`, so the hook import guard never ran on them.
+- The hook import guard never ran on PRs touching only
+  `plugins/*/hooks/**` or `plugins/*/src/**`: `ecosystem-tests.yml`
+  skipped them.
 - The `json_utils.sh` drift hook watched the wrong file for all three
   copies, and no workflow ran the drift script.
 - `run-plugin-typecheck.sh` exited 1 when no staged file sat under
@@ -370,8 +371,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Hooks emitted permission decisions Claude Code ignores** (imbue,
   gauntlet, memory-palace). The hooks docs accept allow, deny, ask and
   defer and pass any other value through the normal permission flow.
-  Five imbue vow and guard hooks sent "block", so enforcing mode never
-  blocked; they now send "deny", and shadow mode sends context only.
+  Five imbue vow and guard hooks sent "block" and never blocked, even
+  in enforcing mode. They now send "deny", and shadow mode sends
+  context only.
   The headless TDD gate sent `decision` instead of `permissionDecision`
   and never deferred under `-p`. gauntlet's pre-commit gate and
   memory-palace's research interceptor sent "allow", approving a
@@ -397,8 +399,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   ran; it reports INCONCLUSIVE.
 - egregore's scout dropped `gh` failures silently; they go to stderr
   and a failed post raises.
-- leyline's `interactive_auth.sh` without jq read no cached value, so
-  every call re-authenticated. jq is now a checked dependency.
+- Without jq, leyline's `interactive_auth.sh` read no cached value and
+  re-authenticated on every call. jq is now a checked dependency.
 - sanctum's post-implementation policy never matched plugin-scoped
   agent names (`pensive:code-reviewer`).
 

@@ -81,7 +81,9 @@ The 2026-08-02 board sweep treated 46 uncommented findings as open work. Verifyi
 
 ### What went well / where we got lucky
 
-The mention bucket did its job. It kept an unproven claim out of the write-back path instead of posting a wrong "fixed" comment, so the false positive cost a human read rather than a bad board entry.
+The mention bucket did its job. It kept an unproven claim out of the write-back
+path instead of posting a wrong "fixed" comment. The false positive cost a human
+read rather than a bad board entry.
 
 ### What did not work
 
@@ -89,11 +91,21 @@ Reading the bucket as a status. Commit 6b28aa1a did not fix #424: it is the dogf
 
 ### Root cause
 
-The house convention read a comment on a finding as "somebody triaged this", and no workflow step told the board when a fix landed. A fixed finding and an ignored one were the same shape from the board's side, so every sweep paid to re-derive the same answer. The mention heuristic inherits that ambiguity: mention is evidence of contact, not of repair.
+The house convention read a comment on a finding as "somebody triaged this", and
+no workflow step told the board when a fix landed. Because a fixed finding and
+an ignored one were the same shape from the board's side, every sweep paid to
+re-derive the same answer. The mention heuristic inherits that ambiguity:
+mention is evidence of contact, not of repair.
 
 ### Recommendation / action item
 
-Resolved for the forward path. scripts/reconcile_discussions.py and the Addresses-Discussion: trailer close the loop, so a fix now announces itself and the comment posts automatically. The mention bucket stays, and stays a lead for a human rather than a status: read an entry there as "a commit touched this number", then check which direction it touched it. Four findings fixed before the trailer convention existed (#604, #610, #586, #520) needed a hand-written write-back, which is the shape of every pre-trailer backlog item.
+Resolved for the forward path. With scripts/reconcile_discussions.py and the
+Addresses-Discussion: trailer, a fix now announces itself and the comment posts
+automatically. The mention bucket stays, and stays a lead for a human rather
+than a status: read an entry there as "a commit touched this number", then check
+which direction it touched it. Four findings fixed before the trailer convention
+existed (#604, #610, #586, #520) needed a hand-written write-back, which is the
+shape of every pre-trailer backlog item.
 
 ## LL-003: A completeness score measured a different gap than the one I was closing
 
@@ -119,13 +131,21 @@ I wrote demo-provider-status and demo-provider-doctor, about twenty lines, befor
 
 ### Root cause
 
-The dogfooder measures documented commands against Makefile targets. Under that metric conjure was genuinely complete, and the report was correct. The metric cannot see "the aggregate runs nothing real", so a 100% score was consistent with the defect rather than evidence against it. I read a high score on one question as an answer to a different one, then reached for addition rather than inspection.
+The dogfooder measures documented commands against Makefile targets. Under that
+metric conjure was genuinely complete, and the report was correct. The metric
+cannot see "the aggregate runs nothing real". A 100% score was consistent with
+the defect rather than evidence against it. I read a high score on one question
+as an answer to a different one, then reached for addition rather than
+inspection.
 
 ### Recommendation / action item
 
 Action: before adding a target because a coverage tool reports a gap, or declines to, run the plugin's own `help` and read what already exists. Owner: alext. Due: standing. Status: applied in 80e22e0f.
 
-A score answers the question its metric asks, not necessarily the one you have, so treat a perfect score as a prompt to check what was measured. Guarded forward by tests/test_provider_status_demo_is_live.py, which fails any target advertising LIVE with an echo-only recipe.
+Treat a perfect score as a prompt to check what was measured: a score answers
+the question its metric asks, not necessarily the one you have. Guarded forward
+by tests/test_provider_status_demo_is_live.py, which fails any target
+advertising LIVE with an echo-only recipe.
 
 ## LL-004: Dogfooding priced a loop the test suite could not reach
 
@@ -151,7 +171,10 @@ The unit tests. They asserted the hook's decision for a given manifest, which wa
 
 ### Root cause
 
-The hook blocked on a static condition. A manifest with active work stays true until something advances the pipeline, so the hook's answer did not depend on whether the session could advance it. Nothing in the test suite modeled a sequence of stops, so nothing could have caught it.
+The hook blocked on a static condition. A manifest with active work stays true
+until something advances the pipeline, and the hook's answer ignored whether
+the session could advance it. No test in the suite modeled a sequence of stops,
+the only input that could have caught it.
 
 ### Recommendation / action item
 
@@ -169,9 +192,14 @@ The hook blocked on a static condition. A manifest with active work stays true u
 
 ### What happened
 
-Cycle 3 of #662 closed 43 review findings. Several were of the form "this behavior is pinned by no test", so the fix was a new guard. Twice the guard I wrote had the same defect as the code it was guarding, and passed.
+Cycle 3 of #662 closed 43 review findings. Several, of the form "this behavior
+is pinned by no test", were fixed with a new guard. Twice the guard I wrote had
+the same defect as the code it was guarding, and passed.
 
-NB32 asked for per-lane coverage of a scan, because one global total could be satisfied by a single lane. My replacement parametrized over the lanes and globbed each pattern off the filesystem, so it measured the world rather than the scanner. Deleting two lanes from `INVOCATION_GLOBS` left it green.
+NB32 asked for per-lane coverage of a scan, because one global total could be
+satisfied by a single lane. My replacement parametrized over the lanes and
+globbed each pattern off the filesystem. It measured the world rather than the
+scanner. Deleting two lanes from `INVOCATION_GLOBS` left it green.
 
 NB40 asked for a login hint to stop being selected by a substring over prose. My test constructed the auth-unknown case, which `doctor_lines` handles in an earlier arm that prints the hint and returns. The test passed through code my change never touched.
 
@@ -209,7 +237,7 @@ A test written immediately after a fix is written against the author's model of 
 
 The continuation baton exists to tell a stalled autonomous loop from a finished
 one. Its entire claim over a plain timeout is that it measures a missed handoff
-rather than elapsed time, so the session records a deadline at each handoff and
+rather than elapsed time. The session records a deadline at each handoff and
 a turn that happens sets a new one.
 
 Thirteen tests covered the round trip, the stranded case, the advancing case,
@@ -219,8 +247,8 @@ which is a plain age timeout and is exactly what the mechanism is supposed to
 improve on.
 
 The cause was in the implementation, not the tests. `advance_baton` recorded
-`written_at=deadline`, collapsing two fields into one, so every fixture had the
-two values equal and no assertion could separate them.
+`written_at=deadline` and collapsed two fields into one. Every fixture had the
+two values equal, and no assertion could separate them.
 
 ### What went well / where we got lucky
 
@@ -229,7 +257,7 @@ cost under a minute and it caught a defect that thirteen green tests, a passing
 type check and a passing lint did not.
 
 The fix improved the design rather than only the test: `advance_baton` now takes
-`now` as a required keyword, so the write time and the deadline cannot silently
+`now` as a required keyword. The write time and the deadline cannot silently
 be the same value again.
 
 ### What did not work
@@ -243,9 +271,8 @@ made the two rules equivalent.
 
 A guard can only distinguish two rules if some fixture separates them. Every
 fixture here had `written_at` and `deadline` at values where an age rule and a
-deadline rule agree, so the suite had no case that could tell them apart. Naming
-the property in a class name is not the same as constructing the input that
-discriminates it.
+deadline rule agree. Naming the property in a class name is not the same as
+constructing the input that discriminates it.
 
 This generalizes past this module: when a design's whole justification is "not
 the obvious simpler thing", at least one test has to be built from inputs where
@@ -280,14 +307,14 @@ implement the simpler thing and watch what fails.
 A dogfooding pass over `make plugin-check` and the plugin Makefiles found
 two recipes written as `cmd 2>/dev/null || echo "benign fallback"`. A real
 failure, a missing file or an `E902` io-error, printed a harmless message
-and the target still exited 0, so the harness reported zero failures while
+and the target still exited 0. The harness reported zero failures while
 masking defects as skips. conserve pointed at a stale `../conservation/`
 path and parseltongue ran `ruff check parseltongue/` against a path that
 does not exist, because the source lives under `src/`.
 
 The same run hung for over eight minutes on `npx playwright --version` in
-`plugins/scry`, with stdout and stderr redirected, so the stall was silent
-and the run never reached the later plugins.
+`plugins/scry`. With stdout and stderr redirected, the stall was silent, and
+the run never reached the later plugins.
 
 ### What went well / where we got lucky
 
@@ -313,7 +340,7 @@ bug in code, and the same lens applies to Makefile recipes. Presence probes
 and intentional empty-result handlers are legitimate uses of `|| echo` and
 stay.
 
-The stall had a second cause: no step in the loop was bounded, so one
+The stall had a second cause: with no step in the loop bounded, one
 dependency probe that resolved over the network could hold the whole run.
 
 ### Recommendation / action item
@@ -324,7 +351,7 @@ dependency probe that resolved over the network could hold the whole run.
   `tests/unit/test_plugin_check_harness.py`.
 - Action: bound every harness step. Dependency probes use the non-fetching
   `npx --no-install playwright --version`, and the `plugin-check` loop wraps
-  each plugin in `timeout 180`, so a hang surfaces as `(plugin-check failed
+  each plugin in `timeout 180`. A hang surfaces as `(plugin-check failed
   or timed out)`. Owner: night-market maintainers. Due: ongoing. Status:
   closed.
 - Action: wire the forced-eval skill-activation gate prototyped under
@@ -381,8 +408,8 @@ exact trap.
 The other two were tests that could not fail. An oracle sentinel test
 passed with the sentinel check deleted, because `is_provisioned`
 independently blocked the launch. A budget atomic-write test injected its
-failure at `json.dumps`, which raises before `write_text` truncates, so
-the file it was checking was never at risk.
+failure at `json.dumps`, which raises before `write_text` truncates. The
+file it was checking was never at risk.
 
 ### Root cause
 
@@ -391,9 +418,9 @@ that runs it. The array quoting was checked against shellcheck instead of
 the interpreter the script actually gets. The Makefile edit was read as
 text instead of as a recipe.
 
-The two bad tests share a different cause: the assertion was written
-before finding out which guard the code path really depends on, so it
-pinned a condition that was true for an unrelated reason.
+The two bad tests share a different cause: each assertion pinned a
+condition that was true for an unrelated reason, and was written before
+finding out which guard the code path really depends on.
 
 ### Recommendation / action item
 
@@ -434,14 +461,14 @@ verdict and never asserted on it.
 ### What went well / where we got lucky
 
 Nothing was hiding behind the gates. Run directly, conserve's suite was
-787 passed. The targets were covering no defects. Each one had lost the
-ability to report, so the repair was mechanical rather than a bug hunt.
+787 passed. The targets were covering no defects. Because each one had
+lost the ability to report, the repair was mechanical rather than a bug hunt.
 
 ### What did not work
 
 A June commit, `fix(gates): make quality gates able to fail`, had already
-fixed one instance of this class. Nobody searched for the rest, so
-fourteen more survived three months.
+fixed one instance of this class. Nobody searched for the rest.
+Fourteen more survived three months.
 
 The same session that produced the review had, earlier that day,
 reported "conserve passed" on the strength of `make conserve-test`,
@@ -452,8 +479,8 @@ none.
 ### Root cause
 
 `|| echo`, `|| true`, a fallback re-run and a warning-level exit are each
-locally reasonable: they keep a noisy target from blocking work. Nothing
-checked whether a gate could still return nonzero, so each instance was
+locally reasonable: they keep a noisy target from blocking work. With nothing
+checking whether a gate could still return nonzero, each instance was
 added without anyone seeing the class it joined.
 
 ### Recommendation / action item
@@ -560,10 +587,10 @@ bugs before any fix was chosen.
 
 The first test covered one hook file and its name read as if it covered the
 class. Guarding the leaf's import yaml was the tempting fix and the wrong one:
-the leaf cannot parse an entry without yaml, so a guard degrades the module
-silently instead of failing the hook loudly. In abstract, lazifying the root was
-not enough either, because the hook imported through a yaml-bearing module
-rather than past it.
+because the leaf cannot parse an entry without yaml, a guard degrades the
+module silently instead of failing the hook loudly. In abstract, lazifying
+the root was not enough either, because the hook imported through a
+yaml-bearing module rather than past it.
 
 ### Root cause
 
@@ -606,12 +633,12 @@ fix was the form slop-ratchet already used.
 
 ### What did not work
 
-uv run puts the venv first on PATH, so a language: system entry that says
+Because uv run puts the venv first on PATH, a language: system entry that says
 python3 resolves an interpreter with every dependency under uv and one with none
 under git commit. A dry run through uv is not evidence for a hook. The
 pin-freshness gate then held the config edit hostage to an unrelated action
 bump, and pre-commit refuses to run while its own config is modified but
-unstaged, so the two changes could not be committed apart.
+unstaged. The two changes could not be committed apart.
 
 ### Root cause
 
@@ -654,10 +681,10 @@ what happens to any other.
 ### What did not work
 
 Claude Code passes a permissionDecision outside allow, deny, ask and defer, and
-any unrecognized key, through the normal permission flow without an error, so
-every one of these hooks exited 0, printed valid JSON, and blocked nothing.
+any unrecognized key, through the normal permission flow without an error.
+Every one of these hooks exited 0, printed valid JSON, and blocked nothing.
 With VOW_SHADOW_MODE=0 no vow ever blocked. The unit tests pinned the invalid
-values, so they confirmed the defect instead of catching it. The two "allow"
+values and confirmed the defect instead of catching it. The two "allow"
 sites went the other way: they approved a commit or a web call over the user's
 own permission settings.
 

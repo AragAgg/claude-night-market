@@ -11,7 +11,7 @@ See [Capabilities Reference Details](capabilities-reference-details.md).
 ### All Workflows (Alphabetical)
 
 Dynamic-workflow scripts under each plugin's `workflows/`. Discovery
-is by convention, so none is declared in `plugin.json`. Invoke as
+is by convention. None is declared in `plugin.json`. Invoke as
 `/plugin-name:workflow-name`, where the name comes from the script's
 `meta.name`.
 

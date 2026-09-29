@@ -54,8 +54,8 @@ A typical feature runs end to end on a handful of commands:
 
 1. **Start a feature.** `/attune:mission` routes you through
    brainstorm, specify, plan, and execute phases.
-2. **Write the code.** `imbue` enforces a failing test first,
-   so the test is written before the implementation.
+2. **Write the code.** `imbue` enforces a failing test before
+   the implementation is written.
 3. **Review before you push.** `/full-review` runs a
    multi-discipline pass; `/refine-code` cleans up duplication
    and dead code.
