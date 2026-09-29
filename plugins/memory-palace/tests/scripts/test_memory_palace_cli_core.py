@@ -22,6 +22,7 @@ from scripts.memory_palace_cli import (
 )
 
 from memory_palace.palace_manager import MemoryPalaceManager
+from scripts import memory_palace_cli
 
 from .conftest import _default_tending_opts
 
@@ -68,9 +69,10 @@ class TestCLIConstruction:
     """Feature: MemoryPalaceCLI initialises paths correctly."""
 
     def test_init_sets_paths(self) -> None:
-        """Given default construction, paths reference plugin dir."""
+        """Given default construction, plugin_dir is the directory above scripts/."""
         cli = MemoryPalaceCLI()
-        assert cli.plugin_dir.exists() or True  # path may not exist in CI
+        expected = Path(memory_palace_cli.__file__).resolve().parents[1]
+        assert cli.plugin_dir.resolve() == expected
         assert cli.config_file.name == "settings.json"
         assert cli.claude_config.name == "settings.json"
 
