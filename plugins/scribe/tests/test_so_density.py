@@ -74,6 +74,19 @@ def test_a_short_document_is_never_judged() -> None:
 
 
 @pytest.mark.unit
+def test_a_lowered_floor_judges_a_short_document() -> None:
+    """The floor is the caller's to set.
+
+    GIVEN a document under the default floor that is dense with tails
+    WHEN the caller lowers min_words below its length
+    THEN the rate is judged and reported
+    """
+    text = "It was stale, so it missed. " * 10
+    findings = check_so_density(text, min_words=len(text.split()))
+    assert [f.hits for f in findings] == [10]
+
+
+@pytest.mark.unit
 def test_tails_inside_code_are_not_prose() -> None:
     code = "\n```text\n" + "It was stale, so it missed.\n" * 20 + "```\n"
     inline = "`a, so b` " * 20
