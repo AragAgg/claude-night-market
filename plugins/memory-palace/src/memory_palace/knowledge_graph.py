@@ -17,59 +17,9 @@ from typing import Any
 try:
     from leyline.sqlite_graph_base import SqliteGraphBase
 except ImportError:  # pragma: no cover -- standalone fallback
-    # Minimal inline base when leyline is not installed.
-    import sqlite3 as _sqlite3
-    from pathlib import Path as _Path
-
-    class SqliteGraphBase:  # type: ignore[no-redef]  # fallback when leyline not installed
-        """Minimal fallback for connection management."""
-
-        _schema_sql: str = ""
-        _fts_create_sql: str = ""
-        _batch_size: int = 450
-
-        def __init__(self, db_path: str | _Path) -> None:
-            """Open a SQLite connection with WAL mode and foreign keys."""
-            self._db_path = str(db_path)
-            self._conn: _sqlite3.Connection = _sqlite3.connect(self._db_path)
-            self._conn.execute("PRAGMA journal_mode=WAL")
-            self._conn.execute("PRAGMA foreign_keys=ON")
-            self._conn.row_factory = _sqlite3.Row
-            self._has_fts: bool = False
-            try:
-                self._init_schema()
-            except Exception:
-                self._conn.close()
-                raise
-
-        def _init_schema(self) -> None:
-            self._conn.executescript(self._schema_sql)
-            if self._fts_create_sql:
-                try:
-                    self._conn.executescript(self._fts_create_sql)
-                    self._has_fts = True
-                except _sqlite3.OperationalError as exc:
-                    _log.warning("FTS5 unavailable: %s", exc)
-            self._conn.commit()
-
-        def close(self) -> None:
-            """Close the database connection."""
-            self._conn.close()
-
-        def __enter__(self) -> SqliteGraphBase:  # type: ignore[override]  # simpler signature for fallback
-            """Enter context manager."""
-            return self
-
-        def __exit__(self, *exc: object) -> None:
-            """Exit context manager and close connection."""
-            self.close()
-
-        def table_names(self) -> list[str]:
-            """Return names of all tables in the database."""
-            rows = self._conn.execute(
-                "SELECT name FROM sqlite_master WHERE type='table'"
-            ).fetchall()
-            return [r["name"] for r in rows]
+    from memory_palace._vendored_leyline_sqlite_graph_base import (
+        SqliteGraphBase,
+    )
 
 
 _log = logging.getLogger(__name__)
@@ -255,50 +205,10 @@ class KnowledgeGraph(SqliteGraphBase):
         ).fetchall()
         return [dict(r) for r in rows]
 
-    def delete_entity(self, entity_id: str) -> None:
-        """Delete an entity and its FTS entry."""
-        self._conn.execute("DELETE FROM entities WHERE entity_id = ?", (entity_id,))
-        if self._has_fts:
-            self._conn.execute(_FTS_DELETE_SQL, (entity_id,))
-        self._conn.commit()
-
     def entity_count(self) -> int:
         """Return total entity count."""
         row = self._conn.execute("SELECT COUNT(*) FROM entities").fetchone()
         return row[0] if row else 0
-
-    def bulk_upsert_entities(self, entities: list[dict[str, Any]]) -> None:
-        """Batch-insert entities for performance."""
-        now = self._now()
-        for i in range(0, len(entities), self._batch_size):
-            batch = entities[i : i + self._batch_size]
-            for e in batch:
-                meta_json = json.dumps(e.get("metadata", {}))
-                self._conn.execute(
-                    """INSERT INTO entities
-                       (entity_id, entity_type, name, metadata,
-                        created_at, updated_at)
-                       VALUES (?, ?, ?, ?, ?, ?)
-                       ON CONFLICT(entity_id) DO UPDATE SET
-                         entity_type=excluded.entity_type,
-                         name=excluded.name,
-                         metadata=excluded.metadata,
-                         updated_at=excluded.updated_at""",
-                    (
-                        e["entity_id"],
-                        e["entity_type"],
-                        e["name"],
-                        meta_json,
-                        now,
-                        now,
-                    ),
-                )
-                if self._has_fts:
-                    self._conn.execute(
-                        _FTS_SYNC_SQL,
-                        (e["entity_id"], e["name"], e["entity_type"]),
-                    )
-            self._conn.commit()
 
     # ------------------------------------------------------------------
     # Residencies
@@ -341,17 +251,6 @@ class KnowledgeGraph(SqliteGraphBase):
         ).fetchall()
         return [dict(r) for r in rows]
 
-    def get_messengers(self) -> list[dict[str, Any]]:
-        """Get entities with messenger role in multiple palaces."""
-        rows = self._conn.execute(
-            """SELECT entity_id, COUNT(DISTINCT palace_id) as palace_count
-               FROM residencies
-               WHERE role = 'messenger'
-               GROUP BY entity_id
-               HAVING palace_count >= 2"""
-        ).fetchall()
-        return [dict(r) for r in rows]
-
     # ------------------------------------------------------------------
     # Triples (temporal facts)
     # ------------------------------------------------------------------
@@ -388,13 +287,6 @@ class KnowledgeGraph(SqliteGraphBase):
         self._conn.commit()
         return cur.lastrowid or 0
 
-    def get_triples_from(self, subject_id: str) -> list[dict[str, Any]]:
-        """Get all triples where entity is the subject."""
-        rows = self._conn.execute(
-            "SELECT * FROM triples WHERE subject_id = ?", (subject_id,)
-        ).fetchall()
-        return [dict(r) for r in rows]
-
     def get_active_triples_from(self, subject_id: str) -> list[dict[str, Any]]:
         """Get currently active triples (no valid_to set)."""
         rows = self._conn.execute(
@@ -403,16 +295,6 @@ class KnowledgeGraph(SqliteGraphBase):
             (subject_id,),
         ).fetchall()
         return [dict(r) for r in rows]
-
-    def invalidate_triple(self, triple_id: int, valid_to: str = "") -> None:
-        """Mark a triple as no longer valid."""
-        if not valid_to:
-            valid_to = self._now()
-        self._conn.execute(
-            "UPDATE triples SET valid_to = ? WHERE id = ?",
-            (valid_to, triple_id),
-        )
-        self._conn.commit()
 
     # ------------------------------------------------------------------
     # Synapses (weighted links)
@@ -585,13 +467,6 @@ class KnowledgeGraph(SqliteGraphBase):
             (entity_id,),
         ).fetchone()
         return dict(row) if row else None
-
-    def get_entities_by_tier(self, tier: int) -> list[dict[str, Any]]:
-        """Get all entities assigned to a given tier."""
-        rows = self._conn.execute(
-            "SELECT * FROM tier_assignments WHERE tier = ?", (tier,)
-        ).fetchall()
-        return [dict(r) for r in rows]
 
     # ------------------------------------------------------------------
     # FTS5 Search

@@ -12,7 +12,7 @@ Claude Code resolves a subagent's model in this order, first match wins:
 3. the agent's `model:` frontmatter
 4. the main conversation's model
 
-Rung 4 is the trap. The `model` field defaults to `inherit`, so an agent
+Rung 4 is the trap. The `model` field defaults to `inherit`: an agent
 that omits it runs on whatever the parent session runs on. Explore used
 to always run on Haiku; as of v2.1.198 it inherits instead, capped at
 Opus on the Claude API. Plan and general-purpose inherit as well.
@@ -40,19 +40,19 @@ pipeline steps by the same tiers.
 Relative cost is input price per MTok from the model card, normalized to
 Haiku: `haiku` $1, `sonnet` $3, `opus` $5, `fable` $10. Output prices
 scale the same way ($5 / $15 / $25 / $50). The multipliers above are
-list prices, so this table needs no change on the day a promotion ends.
+list prices and need no change on the day a promotion ends.
 Sonnet 5 has an introductory price of $2 / $10 running to 2026-08-31,
 which puts its real multiplier nearer 2x until that date.
 
 `inherit` is not an accepted value. It is the default this matrix exists
-to eliminate, so accepting it explicitly would defeat the gate.
+to eliminate.
 
 Accepted effort levels are `low`, `medium`, `high`, `xhigh`, and `max`.
 The last two are reserved for work where a missed finding costs more
 than the extra tokens: adversarial audits and multi-agent orchestration.
 No agent pins them today, and adding one needs a line in its roster
 entry saying why. On Opus 5 and Sonnet 5 the harness already defaults
-`effort` to `high`, so pinning `high` matches the default rather than
+`effort` to `high`. Pinning `high` matches the default rather than
 raising it.
 
 `fable` is the Frontier tier, not a creative-writing tier. The model
@@ -63,7 +63,7 @@ agent runs long enough that a wrong turn compounds. Reach for it when
 `opus` has already proven insufficient on the same task, not by default.
 
 Claude Mythos 5 shares Fable 5's specs but is invitation-only under
-Project Glasswing and is not exposed as a Claude Code tier, so it is
+Project Glasswing. It is not exposed as a Claude Code tier and is
 deliberately absent from this table and from `VALID_MODELS`.
 
 The vocabulary here is not the source of truth for what upstream ships.
@@ -122,6 +122,7 @@ work that misses a subtle finding costs more than the tokens it saved.
 | `scry:media-recorder` | Executes VHS and Playwright scripts, no judgment |
 | `tome:code-searcher` | GitHub search returning repo metadata and ranking |
 | `tome:discourse-scanner` | Scrapes discussion threads into a fixed schema |
+| `tome:web-searcher` | Runs web queries and parses results into a fixed schema |
 
 ### Standard (`sonnet` / `medium`)
 
@@ -197,9 +198,9 @@ on skill-graph structure and dependency design, which is architecture
 work whose mistakes propagate across every plugin that consumes the
 advice.
 
-**`tome:code-searcher` and `discourse-scanner` are Lightweight, but
-`literature-reviewer` is Standard.** The first two return metadata in a
-fixed shape from search results. The third parses PDFs and extracts
+**`tome:code-searcher`, `discourse-scanner` and `web-searcher` are
+Lightweight, but `literature-reviewer` is Standard.** The first three
+return metadata in a fixed shape from search results. The third parses PDFs and extracts
 findings, which requires reading for meaning rather than filling a schema.
 
 ## Enforcement
@@ -216,9 +217,9 @@ in CI.
 | `plugins/**/SKILL.md` | May omit `model`, but must never pin a dated ID |
 | This document | Its roster must name exactly the agents that exist on disk |
 
-The skill rule is deliberately weaker than the agent rule. A skill
-spawns no subagent, so omitting `model` carries none of the inheritance
-hazard. A dated ID rots either way.
+The skill rule is deliberately weaker than the agent rule. Because a
+skill spawns no subagent, omitting `model` carries none of the
+inheritance hazard. A dated ID rots either way.
 
 The roster rule makes this document self-enforcing. The guide it
 replaced rotted precisely because a hand-maintained agent list had
@@ -230,20 +231,20 @@ This is a hard gate, not a ratchet. The sibling guards
 (`check_skill_exit_criteria_drift.py`, `check_skill_graph_drift.py`) cap a
 count against a baseline because they have a backlog to burn down. This
 one has no backlog: the change that introduced it brought all 56 agents
-into compliance, so the illegal state is unrepresentable rather than
+into compliance. The illegal state is unrepresentable rather than
 merely capped.
 
 **`plugins/abstract/hooks/agent_dispatch_guard.py`** is a PreToolUse hook
 matching `Agent|Task`. It denies any dispatch that omits `subagent_type`
 and the denial names which tier fits which task shape. Omitting the agent
 name is the one path that reaches rung 4 of model resolution regardless
-of what the frontmatter says, so the frontmatter gate alone cannot cover
-it.
+of what the frontmatter says, a path the frontmatter gate alone cannot
+cover.
 
 Because the hook's own tests import it as a module, they keep passing
 even if the `hooks.json` registration is deleted. A separate test class,
 `TestEnforcementIsWired`, asserts that both the pre-commit entry and the
-hook registration exist, so removing either fails CI rather than silently
+hook registration exist. Removing either fails CI rather than silently
 disabling enforcement.
 
 The frontmatter is the single source of truth for which tier an agent
@@ -255,9 +256,9 @@ drift, never consulted for the tier itself.
 ## Tuning the matrix
 
 Change the `model` and `effort` in the agent's frontmatter, then update
-that agent's row and its rationale here. The gate checks the shape of the
-frontmatter, not its agreement with this table, so the table never blocks
-a retune. It records the reasoning so the next person retuning knows what
+that agent's row and its rationale here. Because the gate checks the shape
+of the frontmatter, not its agreement with this table, the table never
+blocks a retune. It records the reasoning so the next person retuning knows what
 they are overriding.
 
 Two escape hatches exist outside the matrix:

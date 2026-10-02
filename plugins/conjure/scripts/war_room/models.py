@@ -168,9 +168,7 @@ class ExpertConfig:
     model: str
     description: str
     phases: list[str]
-    dangerous: bool = True
     command: list[str] | None = None
-    command_resolver: str | None = None
     # Opt-in experts join a panel only when their CLI is installed. Without
     # this, adding an expert silently changes the Borda count for every
     # existing user, because an unavailable expert still votes through the

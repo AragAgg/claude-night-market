@@ -1,6 +1,6 @@
 # Claude Night Market
 
-Claude Night Market contains 16 plugins for Claude Code that automate git
+Claude Night Market contains 23 plugins for Claude Code that automate git
 operations, code review, and specification-driven development.
 Each plugin operates independently,
 allowing you to install only the components required for your specific workflow.

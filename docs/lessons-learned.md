@@ -23,6 +23,9 @@ so the team replicates what worked and avoids what did not.
 | LL-008 | open | Fixes that regress the tool that runs them | 2026-09-10 |
 | LL-009 | open | Fifteen findings named one defect: gates that convert failure into output | 2026-09-02 |
 | LL-010 | open | Review agents reported four criticals that one command refuted | 2026-09-02 |
+| LL-011 | open | A package root put PyYAML in front of every stdlib-only hook | 2026-09-22 |
+| LL-012 | open | uv run pre-commit vouched for hooks that git commit could not run | 2026-09-22 |
+| LL-013 | done | Hooks sent permission decisions Claude Code ignores | 2026-09-28 |
 
 ## Lessons
 
@@ -78,7 +81,9 @@ The 2026-08-02 board sweep treated 46 uncommented findings as open work. Verifyi
 
 ### What went well / where we got lucky
 
-The mention bucket did its job. It kept an unproven claim out of the write-back path instead of posting a wrong "fixed" comment, so the false positive cost a human read rather than a bad board entry.
+The mention bucket did its job. It kept an unproven claim out of the write-back
+path instead of posting a wrong "fixed" comment. The false positive cost a human
+read rather than a bad board entry.
 
 ### What did not work
 
@@ -86,11 +91,21 @@ Reading the bucket as a status. Commit 6b28aa1a did not fix #424: it is the dogf
 
 ### Root cause
 
-The house convention read a comment on a finding as "somebody triaged this", and no workflow step told the board when a fix landed. A fixed finding and an ignored one were the same shape from the board's side, so every sweep paid to re-derive the same answer. The mention heuristic inherits that ambiguity: mention is evidence of contact, not of repair.
+The house convention read a comment on a finding as "somebody triaged this", and
+no workflow step told the board when a fix landed. Because a fixed finding and
+an ignored one were the same shape from the board's side, every sweep paid to
+re-derive the same answer. The mention heuristic inherits that ambiguity:
+mention is evidence of contact, not of repair.
 
 ### Recommendation / action item
 
-Resolved for the forward path. scripts/reconcile_discussions.py and the Addresses-Discussion: trailer close the loop, so a fix now announces itself and the comment posts automatically. The mention bucket stays, and stays a lead for a human rather than a status: read an entry there as "a commit touched this number", then check which direction it touched it. Four findings fixed before the trailer convention existed (#604, #610, #586, #520) needed a hand-written write-back, which is the shape of every pre-trailer backlog item.
+Resolved for the forward path. With scripts/reconcile_discussions.py and the
+Addresses-Discussion: trailer, a fix now announces itself and the comment posts
+automatically. The mention bucket stays, and stays a lead for a human rather
+than a status: read an entry there as "a commit touched this number", then check
+which direction it touched it. Four findings fixed before the trailer convention
+existed (#604, #610, #586, #520) needed a hand-written write-back, which is the
+shape of every pre-trailer backlog item.
 
 ## LL-003: A completeness score measured a different gap than the one I was closing
 
@@ -116,13 +131,21 @@ I wrote demo-provider-status and demo-provider-doctor, about twenty lines, befor
 
 ### Root cause
 
-The dogfooder measures documented commands against Makefile targets. Under that metric conjure was genuinely complete, and the report was correct. The metric cannot see "the aggregate runs nothing real", so a 100% score was consistent with the defect rather than evidence against it. I read a high score on one question as an answer to a different one, then reached for addition rather than inspection.
+The dogfooder measures documented commands against Makefile targets. Under that
+metric conjure was genuinely complete, and the report was correct. The metric
+cannot see "the aggregate runs nothing real". A 100% score was consistent with
+the defect rather than evidence against it. I read a high score on one question
+as an answer to a different one, then reached for addition rather than
+inspection.
 
 ### Recommendation / action item
 
 Action: before adding a target because a coverage tool reports a gap, or declines to, run the plugin's own `help` and read what already exists. Owner: alext. Due: standing. Status: applied in 80e22e0f.
 
-A score answers the question its metric asks, not necessarily the one you have, so treat a perfect score as a prompt to check what was measured. Guarded forward by tests/test_provider_status_demo_is_live.py, which fails any target advertising LIVE with an echo-only recipe.
+Treat a perfect score as a prompt to check what was measured: a score answers
+the question its metric asks, not necessarily the one you have. Guarded forward
+by tests/test_provider_status_demo_is_live.py, which fails any target
+advertising LIVE with an echo-only recipe.
 
 ## LL-004: Dogfooding priced a loop the test suite could not reach
 
@@ -148,7 +171,10 @@ The unit tests. They asserted the hook's decision for a given manifest, which wa
 
 ### Root cause
 
-The hook blocked on a static condition. A manifest with active work stays true until something advances the pipeline, so the hook's answer did not depend on whether the session could advance it. Nothing in the test suite modeled a sequence of stops, so nothing could have caught it.
+The hook blocked on a static condition. A manifest with active work stays true
+until something advances the pipeline, and the hook's answer ignored whether
+the session could advance it. No test in the suite modeled a sequence of stops,
+the only input that could have caught it.
 
 ### Recommendation / action item
 
@@ -166,9 +192,14 @@ The hook blocked on a static condition. A manifest with active work stays true u
 
 ### What happened
 
-Cycle 3 of #662 closed 43 review findings. Several were of the form "this behavior is pinned by no test", so the fix was a new guard. Twice the guard I wrote had the same defect as the code it was guarding, and passed.
+Cycle 3 of #662 closed 43 review findings. Several, of the form "this behavior
+is pinned by no test", were fixed with a new guard. Twice the guard I wrote had
+the same defect as the code it was guarding, and passed.
 
-NB32 asked for per-lane coverage of a scan, because one global total could be satisfied by a single lane. My replacement parametrized over the lanes and globbed each pattern off the filesystem, so it measured the world rather than the scanner. Deleting two lanes from `INVOCATION_GLOBS` left it green.
+NB32 asked for per-lane coverage of a scan, because one global total could be
+satisfied by a single lane. My replacement parametrized over the lanes and
+globbed each pattern off the filesystem. It measured the world rather than the
+scanner. Deleting two lanes from `INVOCATION_GLOBS` left it green.
 
 NB40 asked for a login hint to stop being selected by a substring over prose. My test constructed the auth-unknown case, which `doctor_lines` handles in an earlier arm that prints the hint and returns. The test passed through code my change never touched.
 
@@ -206,7 +237,7 @@ A test written immediately after a fix is written against the author's model of 
 
 The continuation baton exists to tell a stalled autonomous loop from a finished
 one. Its entire claim over a plain timeout is that it measures a missed handoff
-rather than elapsed time, so the session records a deadline at each handoff and
+rather than elapsed time. The session records a deadline at each handoff and
 a turn that happens sets a new one.
 
 Thirteen tests covered the round trip, the stranded case, the advancing case,
@@ -216,8 +247,8 @@ which is a plain age timeout and is exactly what the mechanism is supposed to
 improve on.
 
 The cause was in the implementation, not the tests. `advance_baton` recorded
-`written_at=deadline`, collapsing two fields into one, so every fixture had the
-two values equal and no assertion could separate them.
+`written_at=deadline` and collapsed two fields into one. Every fixture had the
+two values equal, and no assertion could separate them.
 
 ### What went well / where we got lucky
 
@@ -226,7 +257,7 @@ cost under a minute and it caught a defect that thirteen green tests, a passing
 type check and a passing lint did not.
 
 The fix improved the design rather than only the test: `advance_baton` now takes
-`now` as a required keyword, so the write time and the deadline cannot silently
+`now` as a required keyword. The write time and the deadline cannot silently
 be the same value again.
 
 ### What did not work
@@ -240,9 +271,8 @@ made the two rules equivalent.
 
 A guard can only distinguish two rules if some fixture separates them. Every
 fixture here had `written_at` and `deadline` at values where an age rule and a
-deadline rule agree, so the suite had no case that could tell them apart. Naming
-the property in a class name is not the same as constructing the input that
-discriminates it.
+deadline rule agree. Naming the property in a class name is not the same as
+constructing the input that discriminates it.
 
 This generalizes past this module: when a design's whole justification is "not
 the obvious simpler thing", at least one test has to be built from inputs where
@@ -277,14 +307,14 @@ implement the simpler thing and watch what fails.
 A dogfooding pass over `make plugin-check` and the plugin Makefiles found
 two recipes written as `cmd 2>/dev/null || echo "benign fallback"`. A real
 failure, a missing file or an `E902` io-error, printed a harmless message
-and the target still exited 0, so the harness reported zero failures while
+and the target still exited 0. The harness reported zero failures while
 masking defects as skips. conserve pointed at a stale `../conservation/`
 path and parseltongue ran `ruff check parseltongue/` against a path that
 does not exist, because the source lives under `src/`.
 
 The same run hung for over eight minutes on `npx playwright --version` in
-`plugins/scry`, with stdout and stderr redirected, so the stall was silent
-and the run never reached the later plugins.
+`plugins/scry`. With stdout and stderr redirected, the stall was silent, and
+the run never reached the later plugins.
 
 ### What went well / where we got lucky
 
@@ -310,7 +340,7 @@ bug in code, and the same lens applies to Makefile recipes. Presence probes
 and intentional empty-result handlers are legitimate uses of `|| echo` and
 stay.
 
-The stall had a second cause: no step in the loop was bounded, so one
+The stall had a second cause: with no step in the loop bounded, one
 dependency probe that resolved over the network could hold the whole run.
 
 ### Recommendation / action item
@@ -321,7 +351,7 @@ dependency probe that resolved over the network could hold the whole run.
   `tests/unit/test_plugin_check_harness.py`.
 - Action: bound every harness step. Dependency probes use the non-fetching
   `npx --no-install playwright --version`, and the `plugin-check` loop wraps
-  each plugin in `timeout 180`, so a hang surfaces as `(plugin-check failed
+  each plugin in `timeout 180`. A hang surfaces as `(plugin-check failed
   or timed out)`. Owner: night-market maintainers. Due: ongoing. Status:
   closed.
 - Action: wire the forced-eval skill-activation gate prototyped under
@@ -378,8 +408,8 @@ exact trap.
 The other two were tests that could not fail. An oracle sentinel test
 passed with the sentinel check deleted, because `is_provisioned`
 independently blocked the launch. A budget atomic-write test injected its
-failure at `json.dumps`, which raises before `write_text` truncates, so
-the file it was checking was never at risk.
+failure at `json.dumps`, which raises before `write_text` truncates. The
+file it was checking was never at risk.
 
 ### Root cause
 
@@ -388,9 +418,9 @@ that runs it. The array quoting was checked against shellcheck instead of
 the interpreter the script actually gets. The Makefile edit was read as
 text instead of as a recipe.
 
-The two bad tests share a different cause: the assertion was written
-before finding out which guard the code path really depends on, so it
-pinned a condition that was true for an unrelated reason.
+The two bad tests share a different cause: each assertion pinned a
+condition that was true for an unrelated reason, and was written before
+finding out which guard the code path really depends on.
 
 ### Recommendation / action item
 
@@ -431,14 +461,14 @@ verdict and never asserted on it.
 ### What went well / where we got lucky
 
 Nothing was hiding behind the gates. Run directly, conserve's suite was
-787 passed. The targets were covering no defects. Each one had lost the
-ability to report, so the repair was mechanical rather than a bug hunt.
+787 passed. The targets were covering no defects. Because each one had
+lost the ability to report, the repair was mechanical rather than a bug hunt.
 
 ### What did not work
 
 A June commit, `fix(gates): make quality gates able to fail`, had already
-fixed one instance of this class. Nobody searched for the rest, so
-fourteen more survived three months.
+fixed one instance of this class. Nobody searched for the rest.
+Fourteen more survived three months.
 
 The same session that produced the review had, earlier that day,
 reported "conserve passed" on the strength of `make conserve-test`,
@@ -449,8 +479,8 @@ none.
 ### Root cause
 
 `|| echo`, `|| true`, a fallback re-run and a warning-level exit are each
-locally reasonable: they keep a noisy target from blocking work. Nothing
-checked whether a gate could still return nonzero, so each instance was
+locally reasonable: they keep a noisy target from blocking work. With nothing
+checking whether a gate could still return nonzero, each instance was
 added without anyone seeing the class it joined.
 
 ### Recommendation / action item
@@ -525,6 +555,153 @@ in the contract asked for any of them.
 - Action: before triaging an old findings list entry by entry, run the
   mechanical checks that could close a category at once. Owner:
   night-market maintainers. Status: open.
+
+## LL-011: A package root put PyYAML in front of every stdlib-only hook
+
+- Status: open
+- Date: 2026-09-22
+- Phase: execute
+- Category: technology
+- Owner: night-market maintainers
+- Links: 496a8f68, 0a5c1dbb, tests/test_hooks_import_without_project_deps.py
+<!-- key: d76f1b296e51 -->
+
+### What happened
+
+Every session start and stop printed a ModuleNotFoundError for PyYAML from a
+memory-palace hook that wanted one stdlib-only name. Hooks run under the
+operator's PATH python3, which carries no project dependencies. import
+memory_palace.paths executed memory_palace/__init__.py first, and that file
+eagerly re-exported a class whose module imports yaml. A sweep of all 52
+registered hooks found the same shape in three more, across abstract and
+hookify, one of them a regression on the branch.
+
+### What went well / where we got lucky
+
+Blocking yaml through sitecustomize in a subprocess reproduced the operator's
+interpreter from inside a venv that has PyYAML. Running the sweep against the
+installed 1.9.20 copies separated the branch regression from the pre-existing
+bugs before any fix was chosen.
+
+### What did not work
+
+The first test covered one hook file and its name read as if it covered the
+class. Guarding the leaf's import yaml was the tempting fix and the wrong one:
+because the leaf cannot parse an entry without yaml, a guard degrades the
+module silently instead of failing the hook loudly. In abstract, lazifying
+the root was not enough either, because the hook imported through a
+yaml-bearing module rather than past it.
+
+### Root cause
+
+import pkg.leaf executes pkg/__init__.py first. A package root that re-exports
+for convenience turns every one of its dependencies into a dependency of every
+leaf, and a hook only ever wants a leaf.
+
+### Recommendation / action item
+
+Action: package roots resolve exports on first attribute access, and helpers a
+hook needs live in a stdlib-only module such as abstract/paths.py;
+tests/test_hooks_import_without_project_deps.py fails on any registered hook
+that cannot import with PyYAML blocked. Owner: night-market maintainers. Due:
+2026-09-22. Status: done.
+
+## LL-012: uv run pre-commit vouched for hooks that git commit could not run
+
+- Status: open
+- Date: 2026-09-22
+- Phase: review
+- Category: process
+- Owner: night-market maintainers
+- Links: 01295e0e, f1ed63b1, tests/test_precommit_entries_import_without_project_deps.py
+<!-- key: f4af0d2bc4dd -->
+
+### What happened
+
+Committing a SKILL.md change failed in two pre-commit hooks with
+ModuleNotFoundError for PyYAML. Both entries invoked python3 from PATH. Minutes
+earlier, uv run pre-commit run --files had passed the same hooks on the same
+files. A sweep of every bare-python3 entry found two more that would fail the
+same way on their own trigger files.
+
+### What went well / where we got lucky
+
+The failing hook could be run the way git commit runs it, through the
+interpreter named in .git/hooks/pre-commit with PATH reduced to
+/opt/homebrew/bin:/usr/bin:/bin, and that reproduced the failure on demand. The
+fix was the form slop-ratchet already used.
+
+### What did not work
+
+Because uv run puts the venv first on PATH, a language: system entry that says
+python3 resolves an interpreter with every dependency under uv and one with none
+under git commit. A dry run through uv is not evidence for a hook. The
+pin-freshness gate then held the config edit hostage to an unrelated action
+bump, and pre-commit refuses to run while its own config is modified but
+unstaged. The two changes could not be committed apart.
+
+### Root cause
+
+Two interpreters share the name python3, and the check ran under the one that
+never runs the hook.
+
+### Recommendation / action item
+
+Action: verify a language: system hook the way git commit runs it, not through
+uv; run any entry that needs PyYAML as uv run --with pyyaml python;
+tests/test_precommit_entries_import_without_project_deps.py fails on any
+bare-python3 entry that cannot import with PyYAML blocked. Owner: night-market
+maintainers. Due: 2026-09-22. Status: done.
+
+## LL-013: Hooks sent permission decisions Claude Code ignores
+
+- Status: done
+- Date: 2026-09-28
+- Phase: review
+- Category: technology
+- Owner: night-market maintainers
+- Links: fc89f1de, a91854a2, PR #841
+<!-- key: 3ef99ac1498b -->
+
+### What happened
+
+Five imbue vow and guard hooks sent permissionDecision values "block" and
+"warn". The headless branch of tdd_bdd_gate sent a `decision` key instead of
+permissionDecision. gauntlet's pre-commit gate and memory-palace's research
+interceptor sent "allow" when they only meant to step aside or add context. A
+whole-codebase review found the headless branch by mutation testing, and the
+fix for it exposed the rest.
+
+### What went well / where we got lucky
+
+Mutation testing showed the headless branch had no test at all, and the hooks
+docs settled the question outright: they name the four valid values and say
+what happens to any other.
+
+### What did not work
+
+Claude Code passes a permissionDecision outside allow, deny, ask and defer, and
+any unrecognized key, through the normal permission flow without an error.
+Every one of these hooks exited 0, printed valid JSON, and blocked nothing.
+With VOW_SHADOW_MODE=0 no vow ever blocked. The unit tests pinned the invalid
+values and confirmed the defect instead of catching it. The two "allow"
+sites went the other way: they approved a commit or a web call over the user's
+own permission settings.
+
+### Root cause
+
+Hook output was tested against strings this repository chose, never against the
+documented protocol. The harness reports an ignored value or key only as a
+warning in the `claude --debug` log, which no test or session reads.
+
+### Recommendation / action item
+
+Action: vow and guard hooks emit through vow_utils.vow_output, which sends
+"deny" when enforcing and additionalContext in shadow mode, and
+tests/unit/hooks/test_vow_output_protocol.py checks the documented values.
+Context-only hooks return no decision. Follow-up: a repo-wide test that every
+PreToolUse hook's output uses only documented keys and values. Owner:
+night-market maintainers. Due: 2026-09-28. Status: done, follow-up open.
 
 ## Archive
 

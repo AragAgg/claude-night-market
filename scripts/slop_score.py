@@ -1,19 +1,14 @@
 #!/usr/bin/env python3
 """Score prose for AI slop, sourcing every pattern from the YAML.
 
-`slop-check.yml` used to carry its own `TIER1=`/`TIER2=` grep
-alternations. `plugins/scribe/data/languages/en.yaml` is documented as
-the single pattern source that `Skill(scribe:slop-detector)` loads at
-runtime, so the gate was enforcing a snapshot: every Tier 5 category
-added since was invisible to CI, and a grep alternation of bare words
-cannot express a regex category anyway.
+`plugins/scribe/data/languages/en.yaml` is the single pattern source
+that `Skill(scribe:slop-detector)` loads at runtime, and this gate reads
+the same file, so `slop-check.yml` carries no pattern list of its own.
+A category added to the YAML reaches CI with no workflow edit, which is
+the property `tests/unit/test_slop_score.py` pins.
 
-Reading the YAML means a category added there reaches CI with no
-workflow edit, which is the property `tests/unit/test_slop_score.py`
-pins.
-
-Scoring keeps the shape the workflow already reported so its threshold
-and PR comment stay meaningful: weighted hits per 100 words, tier 1
+Scoring uses the shape the workflow reports, so its threshold and PR
+comment stay meaningful: weighted hits per 100 words, tier 1
 words worth 3 and tier 2 worth 2, with each Tier 5 category worth the
 score it declares for itself. Opt-in categories stay out, matching a
 default sweep.
@@ -43,6 +38,11 @@ from pathlib import Path
 _REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(_REPO_ROOT / "plugins" / "scribe" / "src"))
 
+from scribe.connectives import check_so_density
+from scribe.markdown_spans import (  # noqa: E402 - path must be set before import
+    FENCED_CODE,
+    INLINE_CODE,
+)
 from scribe.negation import (  # noqa: E402 - path must be set before import
     check_negation_density,
 )
@@ -81,22 +81,16 @@ EM_DASH_WEIGHT = 1
 
 CONFIG_NAME = ".slop-config.yaml"
 
-_FENCED_CODE = re.compile(r"^```.*?^```", re.DOTALL | re.MULTILINE)
-# Double-backtick spans come first, because the single-backtick
-# alternative would consume the opening pair as an empty span and leave
-# the code between them bare. RST and Sphinx docstrings mark code that
-# way by convention, so before this the formula in ``(n_i - n_j) / (n_i
-# + n_j)`` reached the scorer as prose and scored a plus sign as a
-# conjunction.
-# Shared by the gate and the audit, so the two cannot drift.
-#
+_FENCED_CODE = FENCED_CODE
 # The pipe guards keep markdown table separators out. `slop-scan-for-docs.md`
 # rule 2a exempts `| -- |` explicitly, and the bare form matched every
 # table in the repository, which is why promoting this to the gate
 # needed the exemption implemented rather than only documented.
 _DOUBLE_DASH = re.compile(r"(?<!\|\s)(?<=\s)--(?=\s)(?!\s*\|)")
 
-_INLINE_CODE = re.compile(r"``[^`]*``|`[^`\n]*`")
+# One pattern for the scorer and the scribe checks alike; the reason
+# it has to be RST-aware lives with it in scribe/markdown_spans.py.
+_INLINE_CODE = INLINE_CODE
 
 
 @dataclass(frozen=True)
@@ -518,7 +512,8 @@ def _audit(paths: list, allow: frozenset) -> int:
         text = _read_prose(path)
         hits = audit_text(text, allowlist=allow)
         density = check_negation_density(text)
-        if not hits and not density:
+        so_density = check_so_density(text)
+        if not hits and not density and not so_density:
             continue
         print(f"{path}")
         for hit in hits:
@@ -526,7 +521,9 @@ def _audit(paths: list, allow: frozenset) -> int:
             print(f"  {path}:{hit.line}  {hit.category}{marker}  {hit.match!r}")
         for finding in density:
             print(f"  {path}: negation density  {finding.detail}")
-        total += len(hits) + len(density)
+        for so_finding in so_density:
+            print(f"  {path}: so density  {so_finding.detail}")
+        total += len(hits) + len(density) + len(so_density)
     print(f"audited {len(paths)} files, {total} findings")
     print(
         "Findings marked (low) or (medium) are for a human to judge and are "
@@ -535,7 +532,7 @@ def _audit(paths: list, allow: frozenset) -> int:
     print(
         "A document that defines a pattern matches it. The rule files, the "
         "slop-detector modules and this catalog quote every tell they "
-        "describe, so their hits are the definition, not a defect."
+        "describe. Their hits are the definition of the pattern."
     )
     return 0
 
@@ -600,6 +597,15 @@ def main(argv: list | None = None) -> int:
     parser.add_argument("--threshold", type=float, default=3.0)
     parser.add_argument("--top", type=int, default=20)
     parser.add_argument(
+        "--no-exclude",
+        action="store_true",
+        help=(
+            "score paths the config's exclude_patterns would skip. For the "
+            "planted positive control, which the ratchet must ignore and the "
+            "gate must be able to see."
+        ),
+    )
+    parser.add_argument(
         "--audit",
         action="store_true",
         help=(
@@ -625,6 +631,15 @@ def main(argv: list | None = None) -> int:
             "higher than its committed version at REF"
         ),
     )
+    parser.add_argument(
+        "--max-over",
+        type=int,
+        metavar="N",
+        help=(
+            "fail only when more than N files are over the threshold. For a "
+            "tree with a known backlog: the count may fall and hold, never rise"
+        ),
+    )
     args = parser.parse_args(argv)
 
     allow = load_allowlist()
@@ -637,7 +652,10 @@ def main(argv: list | None = None) -> int:
     if args.audit:
         return _audit(paths, allow)
 
-    paths, excluded = _apply_excludes(paths, load_exclude_patterns())
+    if args.no_exclude:
+        excluded: list = []
+    else:
+        paths, excluded = _apply_excludes(paths, load_exclude_patterns())
     if excluded:
         print(f"excluded {len(excluded)} files ({CONFIG_NAME} exclude_patterns)")
 
@@ -692,7 +710,12 @@ def main(argv: list | None = None) -> int:
             + ", ".join(surfaced)
         )
 
-    return 1 if over else 0
+    if args.max_over is None:
+        return 1 if over else 0
+    print(f"{len(over)} files over {args.threshold} (ceiling {args.max_over})")
+    if len(over) < args.max_over:
+        print(f"lower --max-over to {len(over)} so the drop cannot be undone")
+    return 1 if len(over) > args.max_over else 0
 
 
 if __name__ == "__main__":

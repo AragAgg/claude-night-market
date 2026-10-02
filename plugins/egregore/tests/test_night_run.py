@@ -11,12 +11,14 @@ from __future__ import annotations
 
 import shlex
 from collections.abc import Sequence
+from dataclasses import replace
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import night_run
 import pytest
 from budget import Budget
+from handoff_gate import Handoff
 
 
 class FakeRunner:
@@ -63,20 +65,21 @@ def task(expect: str = "pass", match: str = "1 passed") -> dict:
     }
 
 
-HANDOFF = {
-    "item": "NS-001",
-    "branch": "night/NS-001",
-    "base_branch": "main",
-    "scope": {"allow_paths": ["a/"], "max_diff_lines": 200},
-    "commands": {"setup": "uv sync", "test": "pytest -q", "full_test": "pytest -q"},
-    "budget": {
+HANDOFF = Handoff(
+    item="NS-001",
+    title="Run one task",
+    branch="night/NS-001",
+    base_branch="main",
+    scope={"allow_paths": ["a/"], "max_diff_lines": 200},
+    commands={"setup": "uv sync", "test": "pytest -q", "full_test": "pytest -q"},
+    budget={
         "max_tasks": 6,
         "max_attempts_per_task": 3,
         "implementer_timeout_s": 900,
     },
-    "implementer": {"provider": "auto", "allow_on_plan_fallback": False},
-    "babysitter": {"model": "sonnet"},
-}
+    implementer={"provider": "auto", "allow_on_plan_fallback": False},
+    babysitter={"model": "sonnet"},
+)
 
 
 class TestGroundTruthIsCapturedByTheDriver:
@@ -215,20 +218,9 @@ class TestProofLedger:
         assert result.ledger[0]["output"] == "1 passed"
 
 
-def test_render_proof_table_is_readable(tmp_path: Path) -> None:
-    runner = FakeRunner({"pytest -q": (0, "1 passed")})
-    result = night_run.run_task(
-        task(), HANDOFF, tmp_path, runner, babysitter=lambda **_: ("PASS", "", "")
-    )
-    table = night_run.render_proof(result)
-    assert "| T1 |" in table
-    assert "pytest -q" in table
-    assert "PASS" in table
-
-
 @pytest.mark.parametrize("provider", ["auto", "minimax", "qwen"])
 def test_provider_is_passed_through(tmp_path: Path, provider: str) -> None:
-    handoff = {**HANDOFF, "implementer": {"provider": provider}}
+    handoff = replace(HANDOFF, implementer={"provider": provider})
     runner = FakeRunner({"pytest -q": (0, "1 passed")})
     night_run.run_task(
         task(), handoff, tmp_path, runner, babysitter=lambda **_: ("PASS", "", "")

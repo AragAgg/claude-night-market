@@ -159,8 +159,8 @@ fi
 
 - Zero new tool dependencies: git 2.38+ ships on macOS
   12.3+ and all major Linux distros since 2023
-- gh CLI is already required by sanctum, so
-  `gh pr create --base` costs nothing to adopt
+- `gh pr create --base` costs nothing to adopt, because
+  sanctum already requires gh CLI
 - jj opt-in means early adopters get acceleration without
   forcing team-wide migration
 - Skills are documentation-only markdown; they can be

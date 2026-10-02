@@ -20,7 +20,6 @@ history and guides.
 | Skill | Description |
 |-------|-------------|
 | **git-workspace-review** | Preflight checklist for repo state, staged changes, and diffs. |
-| **file-analysis** | Codebase structure mapping and file pattern detection. |
 | **commit-messages** | Conventional commit generation from staged changes. |
 | **pr-prep** | PR preparation with quality gates and template completion. |
 | **doc-consolidation** | Merge ephemeral LLM-generated docs into permanent files. |
@@ -131,7 +130,6 @@ Skill(sanctum:git-workspace-review)
 Most sanctum skills require `git-workspace-review` as a foundation.
 Skills like `commit-messages`, `pr-prep`, `doc-updates`, `update-readme`,
 and `version-updates` depend on its output.
-`file-analysis` operates independently.
 
 ## Workflow Patterns
 

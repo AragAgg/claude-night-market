@@ -275,15 +275,23 @@ class TestReportStatistics:
     """Tests for report_statistics."""
 
     @pytest.mark.unit
-    def test_empty_results_no_crash(self, optimizer) -> None:
-        """Empty results list returns without crash."""
+    def test_empty_results_say_so(self, optimizer, capsys) -> None:
+        """GIVEN no skill files were found
+        WHEN report_statistics runs
+        THEN it says so instead of printing nothing.
+        """
         optimizer.report_statistics([])
+        assert capsys.readouterr().out.strip() == "No skill files found."
 
     @pytest.mark.unit
-    def test_results_with_xlarge_skill_no_crash(
-        self, optimizer, tmp_path: Path
+    def test_xlarge_skill_gets_a_recommendation(
+        self, optimizer, tmp_path: Path, capsys
     ) -> None:
-        """Results with xlarge skill does not crash report."""
+        """GIVEN one skill over 15KB
+        WHEN report_statistics runs
+        THEN the totals, the distribution and a modularization
+            recommendation naming the count are printed.
+        """
         results = [
             {
                 "path": "large-skill/SKILL.md",
@@ -294,10 +302,19 @@ class TestReportStatistics:
             }
         ]
         optimizer.report_statistics(results)
+        out = capsys.readouterr().out
+        assert "Total Skills: 1" in out
+        assert "Total Size: 20,000 bytes" in out
+        assert "Estimated Tokens: 5,000" in out
+        assert "XLarge (>15KB):   1 files" in out
+        assert "Recommendation: 1 file(s) exceed 15KB" in out
 
     @pytest.mark.unit
-    def test_results_with_normal_skills(self, optimizer) -> None:
-        """Normal results processed without crash."""
+    def test_normal_skills_get_no_recommendation(self, optimizer, capsys) -> None:
+        """GIVEN two skills under the xlarge threshold
+        WHEN report_statistics runs
+        THEN the distribution counts them and no recommendation appears.
+        """
         results = [
             {
                 "path": "skill1/SKILL.md",
@@ -309,12 +326,17 @@ class TestReportStatistics:
             {
                 "path": "skill2/SKILL.md",
                 "absolute_path": "/tmp/skill2/SKILL.md",
-                "bytes": 1500,
-                "category": "small",
-                "estimated_tokens": 300,
+                "bytes": 3000,
+                "category": "medium",
+                "estimated_tokens": 750,
             },
         ]
         optimizer.report_statistics(results)
+        out = capsys.readouterr().out
+        assert "Total Skills: 2" in out
+        assert "Small (<2KB):     1 files" in out
+        assert "Medium (2-5KB):   1 files" in out
+        assert "Recommendation" not in out
 
 
 # ---------------------------------------------------------------------------
@@ -544,7 +566,7 @@ class TestContextOptimizerCLIExecute:
     def test_execute_analyze_exception_returns_failure(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Execute when analyze_skill_size raises returns failure."""
+        """Execute when analyze_skill_size raises an I/O error returns failure."""
         cli = ContextOptimizerCLI()
         sf = tmp_path / "SKILL.md"
         sf.write_text("---\nname: x\n---\n\n# Skill\n")
@@ -569,7 +591,7 @@ class TestContextOptimizerCLIExecute:
         monkeypatch.setattr(
             ContextOptimizer,
             "analyze_skill_size",
-            lambda self, path: (_ for _ in ()).throw(RuntimeError("Simulated error")),
+            lambda self, path: (_ for _ in ()).throw(OSError("Simulated error")),
         )
 
         result = cli.execute(args)

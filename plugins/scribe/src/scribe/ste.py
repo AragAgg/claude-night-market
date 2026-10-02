@@ -99,6 +99,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from .markdown_spans import FENCED_CODE, INLINE_CODE, URL
+
 try:
     import yaml
 except ImportError:  # pragma: no cover - exercised via ImportError branch
@@ -127,9 +129,9 @@ _MASK = "¤"
 # numbers computed against the protected text remain correct.
 _DOT = "\x01"
 
-_FENCED_CODE = re.compile(r"```.*?```", re.DOTALL)
-_INLINE_CODE = re.compile(r"`[^`]*`")
-_URL = re.compile(r"\b(?:https?://|www\.)\S+")
+_FENCED_CODE = FENCED_CODE
+_INLINE_CODE = INLINE_CODE
+_URL = URL
 # A bare domain carries no scheme, so the rule above misses it and the
 # host tokenizes into "news ycombinator com". The TLD list is short on
 # purpose: a general domain shape would swallow "config.yaml" and any

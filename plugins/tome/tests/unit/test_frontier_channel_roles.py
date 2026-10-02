@@ -205,3 +205,28 @@ class TestControlsAreOnlyDemandedOfRetrievalChannels:
         )
 
         assert frontier_verdict(session).verdict == INCONCLUSIVE
+
+
+class TestNoRetrievalChannelMeansNoVerdict:
+    """Scenario: a session that searched no index cannot claim coverage."""
+
+    def test_triz_only_session_is_inconclusive(self) -> None:
+        """
+        Given a session whose only planned channel is triz
+        And triz produced findings
+        Then the verdict is INCONCLUSIVE, since no channel searched an index
+        """
+        session = _session(
+            channels=["triz"],
+            logs=[_empty_search("triz")],
+            findings=[_finding("triz", f"bridge-{i}") for i in range(4)],
+        )
+
+        assert frontier_verdict(session).verdict == INCONCLUSIVE
+
+    def test_session_with_no_channels_is_inconclusive(self) -> None:
+        """
+        Given a session with no planned channels
+        Then the verdict is INCONCLUSIVE
+        """
+        assert frontier_verdict(_session(channels=[], logs=[])).verdict == INCONCLUSIVE

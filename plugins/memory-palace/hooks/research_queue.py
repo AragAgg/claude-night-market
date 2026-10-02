@@ -29,6 +29,8 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
+from shared.frontmatter import render_frontmatter
+
 MIN_WEB_SEARCHES = 3
 QUEUE_DIR = Path("docs") / "knowledge-corpus" / "queue"
 MAX_ENTRY_BYTES = 100_000
@@ -59,17 +61,6 @@ SECRET_PATTERN = re.compile(
     r"|api[_-]?key\s*[:=]\s*\S+)",
     re.IGNORECASE,
 )
-
-
-def _yaml_scalar(value: str) -> str:
-    """Quote *value* for use as a YAML double-quoted scalar.
-
-    JSON string syntax is a subset of YAML's double-quoted style, so
-    ``json.dumps`` escapes the quotes, newlines, and control characters
-    that would otherwise close the scalar early and leave the entry
-    unparsable by every reader downstream.
-    """
-    return json.dumps(str(value))
 
 
 def _slug(text: str, limit: int = 40) -> str:
@@ -184,17 +175,20 @@ def _render(
 
     *prompt* and *topic* arrive redacted; see the call site.
     """
+    frontmatter = render_frontmatter(
+        {
+            "created_at": now,
+            "session_id": session_id or "unknown",
+            "session_type": "research",
+            "topic": topic,
+            "status": "pending_review",
+            "auto_generated": True,
+            "web_searches": searches,
+        }
+    )
     return "\n".join(
         [
-            "---",
-            f"created_at: {now.isoformat()}",
-            f"session_id: {session_id or 'unknown'}",
-            "session_type: research",
-            f"topic: {_yaml_scalar(topic)}",
-            "status: pending_review",
-            "auto_generated: true",
-            f"web_searches: {searches}",
-            "---",
+            frontmatter,
             "",
             f"# Research Session: {topic}",
             "",

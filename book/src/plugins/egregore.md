@@ -93,8 +93,8 @@ unexpected errors break the loop despite the hooks.
 
 The Stop hook blocks the session from stopping while the
 manifest holds active work, which is how the loop continues
-without a human turn. That condition is static, so blocking
-on it alone re-injects the prompt forever. Dogfooding
+without a human turn. Because that condition is static,
+blocking on it alone re-injects the prompt forever. Dogfooding
 measured ten turns and roughly $0.70 of Opus for a one-word
 prompt in a project whose manifest had active items and no
 way to advance them.
@@ -123,13 +123,13 @@ room.
 **What the bound does not settle.** Stop-hook re-injection
 is not an upstream-documented continuation mechanism. The
 sanctioned primitives, `/loop` and `CronCreate`, are
-session-scoped, so neither replaces it. This bound prices
+session-scoped and cannot replace it. This bound prices
 the ride and does not sanction it. The full record,
 including the alternatives considered and what would retire
 the reliance, is
 [ADR-0022](../../../docs/adr/0022-stop-hook-reinjection-as-continuation.md).
 The bound takes manifest bytes as its definition of
-progress, so a session that writes the manifest every turn
+progress. A session that writes the manifest every turn
 without advancing the pipeline still loops. That is not the
 measured failure, where a stuck session wrote nothing at
 all.
@@ -158,8 +158,8 @@ for crashes and restarts sessions as needed.
 
 Independent work items run concurrently in git worktrees,
 each on its own branch, isolated from other in-flight work.
-`detect_independent_items()` groups items by `source_ref`,
-so different refs run in parallel and shared refs run in
+`detect_independent_items()` groups items by `source_ref`:
+different refs run in parallel and shared refs run in
 sequence. `max_concurrent_worktrees` (default 3) caps the
 simultaneous worktrees, and `merge_worktree_result()` merges
 each feature branch with `--no-ff` when the item completes.
@@ -171,36 +171,17 @@ waves under the dependency-graph scheduling in
 `code-refinement` and `update-tests` once `code-review`
 finishes.
 
-## Agent Specialization
-
-Specialist agents handle specific pipeline steps and
-accumulate expertise across sessions. `select_specialist(step)`
-picks one, and its context file persists in
-`.egregore/specialists/`.
-
-| Role | Steps | Persisted state |
-|------|-------|-----------------|
-| reviewer | code-review, pr-review | Review context, metrics |
-| documenter | update-docs | Style patterns |
-| tester | update-tests | Coverage history |
-
 ## Cross-Item Learning
 
 The `learning` module reads decision logs from completed
 work items and extracts reusable patterns in four
 categories: tech stack, failure mode, architecture and
 approach. Each pattern records its frequency and its success
-rate across items, and `generate_briefing()` builds a
-context briefing for a new work item from the
-high-frequency ones. Patterns persist in
+rate across items, and `build_learning_context()` turns the
+high-frequency ones into a briefing. The orchestrator runs
+`scripts/learning.py` before each item and prepends the
+briefing to the item's context. Patterns persist in
 `.egregore/learning/patterns.json`.
-
-## Multi-Repository Support
-
-`RepoRegistry` orchestrates work across repositories.
-`register_repo(name, path)` adds one, `route_item()` sends a
-work item to it, and each repo tracks its own default branch
-and labels. The registry persists in `.egregore/repos.json`.
 
 ## GitHub Discussions Publishing
 

@@ -16,10 +16,10 @@ implementation plans accumulated there between 2026-03-18 and
 
 This ADR was written against eight of the ten. The two earliest specs,
 dated 2026-03-18 and 2026-03-19, were still on disk when it landed and
-were missed, so their sections below were added on 2026-09-09.
+were missed. Their sections below were added on 2026-09-09.
 
 Only one of those ten files was ever tracked in git. The other nine were
-untracked local scratch, so every checkout held a different set. That
+untracked local scratch that differed from one checkout to the next. That
 split is the problem: the directory read as a doc of record while
 behaving like a build artifact.
 
@@ -39,8 +39,9 @@ two classes of content first:
 1. Rejected alternatives and deferred scope from the seven shipped
    designs, recorded below.
 2. The one design that never shipped, `slop-clean-before-post`, recorded
-   below in full. `docs/backlog/` is itself gitignored, so the ranking
-   entry there is a local working note and this ADR is the record.
+   below in full. Because `docs/backlog/` is itself gitignored, the
+   ranking entry there is a local working note and this ADR is the
+   record.
 
 Everything else in those files (table schemas, task checklists, file
 inventories, line-count estimates) is scaffolding that the shipped code
@@ -72,7 +73,7 @@ safety-net hooks, and a `leyline` skill as the contract. Convention
 over shared code: the specification is what is shared, not a library.
 
 The constraint that shaped it is the one that still holds. Hooks get
-under two seconds and the system interpreter is Python 3.9, so the
+under two seconds and the system interpreter is Python 3.9. The
 PostToolUse hook detects and writes a ledger entry while the Stop hook
 does every `gh` call. Splitting detect from file is what keeps the
 fast hook inside its budget.
@@ -98,8 +99,8 @@ Parse Claude Code session JSONL, generate a VHS tape file, delegate GIF
 rendering to the existing `scry` plugin.
 
 The tape file is the stable interface. That choice is what keeps the
-renderer swappable and the parser format-agnostic, so a Codex parser or
-an SVG renderer can be added later without a redesign.
+renderer swappable and the parser format-agnostic. A Codex parser or an
+SVG renderer can be added later without a redesign.
 
 | Deferred from v1 | Reason |
 |------------------|--------|
@@ -113,8 +114,8 @@ an SVG renderer can be added later without a redesign.
 
 A utility function scoring candidate actions by gain against step cost,
 uncertainty, and redundancy, living in `leyline` as a shared primitive.
-Consumers integrate in advisory mode by default and prescriptive mode by
-opt-in, so no existing caller changes behavior on adoption.
+No existing caller changes behavior on adoption: consumers integrate in
+advisory mode by default and prescriptive mode by opt-in.
 
 Lambda defaults are not arbitrary. They come from Liu, Zhao, and Xu,
 "Utility-Guided Agent Orchestration for Efficient LLM Tool Use"
@@ -178,7 +179,7 @@ checks this rule discourages, which made a stated carve-out mandatory.
 | Rejected | Reason |
 |----------|--------|
 | A full `imbue` skill with modules | Over-engineering for a behavioral guardrail, on an already RED-ZONE branch |
-| A PreToolUse hook blocking broad `except` | Too blunt. Boundary code legitimately uses broad handlers, so a static block produces false positives |
+| A PreToolUse hook blocking broad `except` | Too blunt. A static block produces false positives on boundary code, which legitimately uses broad handlers |
 
 The rule teaches the keep-versus-remove distinction because that is the
 altitude a static check cannot reach.
@@ -198,7 +199,7 @@ to conform. The rule binds future work only.
 
 Building it surfaced a latent gap in the paradigm test harness worth
 recording: `plugins/archetypes/tests/test_paradigm_components.py` drives
-its parametrize from a hand-maintained `EXPECTED_COMPONENTS` dict, so a
+its parametrize from a hand-maintained `EXPECTED_COMPONENTS` dict. A
 fourteenth paradigm could land on disk and go silently untested. That
 design closed it. Registration in `.claude-plugin/plugin.json` is a
 fifth required artifact: a skill absent from that array does not load.
@@ -211,8 +212,8 @@ deleting the spec would otherwise drop it entirely.
 
 **Problem.** The slop rules cover markdown written to disk and a
 model-invoked skill. Content drafted and posted at runtime to GitHub
-Discussions, Issues, and PR comments never becomes a tracked file, so
-nothing intercepts it.
+Discussions, Issues, and PR comments never becomes a tracked file for
+those rules to intercept.
 
 **Goal.** Every craft-and-post pipeline launders drafted content through
 a deterministic slop remediation pass before posting. The text that goes
@@ -235,7 +236,7 @@ a rule extends the contract to agent-prose paths that never touch code.
 | Rejected | Reason |
 |----------|--------|
 | Hook interceptor on Bash `gh` calls | Payload parsing is brittle across `--body`, `--body-file`, heredocs, and in-process API calls, and it misses direct API posts. Possible follow-up once the launder seam is proven |
-| A rule with per-skill self-check, no code | Convention cannot guarantee deterministic transforms, so it does not honor locked decision 2 |
+| A rule with per-skill self-check, no code | Does not honor locked decision 2: convention cannot guarantee deterministic transforms |
 
 **Non-goals.** No hook-level interception of `gh` in this iteration, no
 LLM-assisted rewriting (deterministic only), no re-linting of files
@@ -249,9 +250,9 @@ defaulted to 3.0, to revisit after the pilot.
 
 **Rollout.** Pilot on the three abstract posters, then `sanctum`
 PR-comment commands, then `scribe:session-to-post`,
-`scribe:voice-generate`, and `minister:create-issue`. Build on a branch
-cut from `master` rather than an existing scope-guard RED branch, so the
-feature starts from a green base.
+`scribe:voice-generate`, and `minister:create-issue`. To start the
+feature from a green base, build on a branch cut from `master` rather
+than an existing scope-guard RED branch.
 
 ## Lessons that generalize
 
@@ -269,7 +270,7 @@ lessons came from the DDD paradigm build and PR #612.
 ### Positive
 
 - `docs/superpowers/` stops presenting scratch output as documentation.
-- Rejected alternatives survive in a doc of record, so a future proposal
+- Rejected alternatives survive in a doc of record. A future proposal
   to add the hook, the vector database, or the browser UI meets an
   answer rather than a blank page.
 - The undelivered `slop-clean-before-post` design is recorded in a
@@ -281,8 +282,8 @@ lessons came from the DDD paradigm build and PR #612.
   for the tome spec only, which was the single tracked file, via git
   history. The nine untracked files are recoverable only from a local
   working tree that still has them.
-- This ADR compresses six designs into one document, so per-design
-  detail is thinner than a dedicated ADR would be. That was the accepted
+- Per-design detail is thinner than a dedicated ADR would be, because
+  this ADR compresses six designs into one document. That was the accepted
   trade: six ADRs would have restated the shipped rules at length.
 
 ## Status of implementation

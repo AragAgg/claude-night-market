@@ -1,6 +1,6 @@
 {
   "name": "scribe",
-  "version": "1.9.20",
+  "version": "1.9.21",
   "description": "Documentation review, cleanup, generation, voice extraction, and human-quality writing enforcement with AI slop detection and SICO-based voice profiling",
   "commands": [
     "./commands/doc-generate.md",
@@ -17,7 +17,6 @@
     "./skills/slop-detector",
     "./skills/style-learner",
     "./skills/doc-generator",
-    "./skills/doc-importer",
     "./skills/tech-tutorial",
     "./skills/session-to-post",
     "./skills/session-replay",

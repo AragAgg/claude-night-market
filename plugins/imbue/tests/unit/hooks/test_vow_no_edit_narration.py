@@ -76,8 +76,9 @@ class TestNarrationIsDetected:
             }
         )
         emitted = json.loads(completed.stdout)
-        decision = emitted["hookSpecificOutput"]["permissionDecision"]
-        assert decision == "warn"
+        hook_out = emitted["hookSpecificOutput"]
+        assert "permissionDecision" not in hook_out
+        assert hook_out["additionalContext"]
         assert completed.returncode == 0
 
 

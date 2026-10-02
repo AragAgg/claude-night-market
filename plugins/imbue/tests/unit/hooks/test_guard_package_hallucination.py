@@ -66,9 +66,8 @@ class TestGuardHook:
         code, out = run_hook("pip install reqeusts", {"VOW_SHADOW_MODE": "1"})
         assert code == 0
         assert out is not None
-        decision = out["hookSpecificOutput"]["permissionDecision"]
-        assert decision == "warn"
-        assert "requests" in out["hookSpecificOutput"]["permissionDecisionReason"]
+        assert "permissionDecision" not in out["hookSpecificOutput"]
+        assert "requests" in out["hookSpecificOutput"]["additionalContext"]
 
     @pytest.mark.unit
     def test_typosquat_blocks_when_blocking_enabled(self):
@@ -76,7 +75,7 @@ class TestGuardHook:
         code, out = run_hook("pip install reqeusts", {"VOW_SHADOW_MODE": "0"})
         assert code == 0
         assert out is not None
-        assert out["hookSpecificOutput"]["permissionDecision"] == "block"
+        assert out["hookSpecificOutput"]["permissionDecision"] == "deny"
 
     @pytest.mark.unit
     def test_hook_never_crashes_on_bad_input(self):

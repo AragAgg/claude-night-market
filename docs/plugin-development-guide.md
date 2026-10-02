@@ -96,13 +96,28 @@ Avoid these patterns in hook code:
 | `type X = ...` aliases | 3.12+ | `TypeAlias` from `typing` |
 | `import yaml` (pyyaml) | not stdlib | `try/except ImportError` with `yaml = None` fallback |
 
+The interpreter is the other half of the constraint. Because a hook runs
+under whatever `python3` the operator's PATH resolves, which carries the
+standard library and nothing else, the row above applies to the whole
+transitive chain. The chain starts at the package root:
+`import pkg.leaf` executes `pkg/__init__.py` first. One eager
+re-export there of a module that imports yaml breaks every hook that
+wanted only a stdlib leaf. The fix belongs at the root, resolving
+exports on first attribute access (`memory_palace/__init__.py` is the
+model), or in a stdlib-only home for the helpers a hook needs
+(`abstract/paths.py`). Guarding the leaf's `import yaml` is the wrong
+fix when the leaf cannot do its job without it; that degrades the
+module silently instead of the hook loudly.
+`tests/test_hooks_import_without_project_deps.py` imports every
+registered hook with PyYAML blocked and fails on the one that cannot.
+
 ### Make Version Requirement
 
 The shared includes under `plugins/abstract/config/make/` set
 `.SHELLFLAGS` to `-euo pipefail` and turn on `.ONESHELL`. GNU make
 introduced both in 3.82. The Xcode command line tools ship 3.81, which
-ignores them silently, so every recipe runs without `pipefail` and a
-failing stage in a pipeline reports success.
+ignores them silently. Under 3.81 every recipe runs without `pipefail`
+and a failing stage in a pipeline reports success.
 
 | Requirement | Check | Fix on macOS |
 |-------------|-------|--------------|

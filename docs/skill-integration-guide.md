@@ -227,7 +227,7 @@ The last two were mislabeled by this table itself. It
 recorded a caller for each that does not exist: no skill
 or command loads `conserve:agent-expenditure`, and
 `/cartograph:visualize` did not route `call-chain` until
-2026-08-16. Both are agent- or command-invoked, so both
+2026-08-16. Both are agent- or command-invoked and
 now declare `role: entrypoint`. A library is a skill some
 other skill loads; naming a caller does not create one.
 
@@ -262,9 +262,9 @@ Field semantics in the audit (`plugins/abstract/scripts/skill_graph.py`):
   `uncalled_libraries` bin: a softer "potentially
   dead" signal that does not conflate with genuine
   orphans.
-- `role: hook-target` skills are invoked by hooks; the
-  audit cannot trace that path, so zero inbound is
-  expected and never flags as an isolate.
+- `role: hook-target` skills are invoked by hooks, a path
+  the audit cannot trace. Zero inbound is expected and
+  never flags as an isolate.
 - Skills without `role:` fall back to legacy zero-degree
   isolate detection. Backfill is opportunistic.
 

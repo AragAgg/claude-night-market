@@ -11,6 +11,7 @@ import base64
 import json
 import re
 import subprocess
+import sys
 from dataclasses import dataclass
 
 
@@ -326,7 +327,14 @@ def fetch_contributing_guide(
     owner: str,
     repo: str,
 ) -> str | None:
-    """Fetch CONTRIBUTING.md from a GitHub repo via gh api."""
+    """Fetch CONTRIBUTING.md from a GitHub repo via gh api.
+
+    Returns None when the guide cannot be read. A 404 means the repo has
+    no guide and is expected; any other failure is written to stderr,
+    because an unauthenticated or rate-limited ``gh`` otherwise looks
+    identical to a repo without a guide.
+    """
+    context = f"fetching CONTRIBUTING.md from {owner}/{repo}"
     try:
         result = subprocess.run(
             [
@@ -342,13 +350,21 @@ def fetch_contributing_guide(
             check=False,
         )
         if result.returncode != 0:
+            if "HTTP 404" not in result.stderr:
+                _report(context, result.stderr)
             return None
         content = base64.b64decode(result.stdout.strip()).decode(
             "utf-8", errors="replace"
         )
         return content
-    except (subprocess.TimeoutExpired, OSError, ValueError):
+    except (subprocess.TimeoutExpired, OSError, ValueError) as exc:
+        _report(context, exc)
         return None
+
+
+def _report(context: str, detail: object) -> None:
+    """Write a failed ``gh`` call to stderr, where an operator sees it."""
+    print(f"scout: {context} failed: {str(detail).strip()}", file=sys.stderr)
 
 
 def post_discussion(
@@ -360,7 +376,8 @@ def post_discussion(
 ) -> str | None:
     """Post a GitHub Discussion via GraphQL.
 
-    Returns the discussion URL on success, None on failure.
+    Returns the discussion URL on success, None on failure, with the
+    reason written to stderr.
     """
     repo_query = (
         f'{{ repository(owner: "{repo_owner}", name: "{repo_name}") {{ id }} }}'
@@ -374,11 +391,13 @@ def post_discussion(
             check=False,
         )
         if result.returncode != 0:
+            _report("looking up the repository id", result.stderr)
             return None
 
         repo_data = json.loads(result.stdout)
         repo_id = repo_data["data"]["repository"]["id"]
-    except (subprocess.TimeoutExpired, OSError, KeyError):
+    except (subprocess.TimeoutExpired, OSError, KeyError) as exc:
+        _report("looking up the repository id", exc)
         return None
 
     # Escape body for inline GraphQL string literal
@@ -417,12 +436,14 @@ def post_discussion(
             check=False,
         )
         if result.returncode != 0:
+            _report("creating the discussion", result.stderr)
             return None
 
         data = json.loads(result.stdout)
         url: str = data["data"]["createDiscussion"]["discussion"]["url"]
         return url
-    except (subprocess.TimeoutExpired, OSError, KeyError):
+    except (subprocess.TimeoutExpired, OSError, KeyError) as exc:
+        _report("creating the discussion", exc)
         return None
 
 
@@ -440,7 +461,9 @@ def run_scout(
     3. Extract review techniques
     4. Post findings to GitHub Discussions
 
-    Returns all discovered techniques.
+    Returns all discovered techniques. Raises ``RuntimeError`` when
+    posting was requested and failed, so a caller's exit status says the
+    findings went nowhere.
     """
     if exemplars is None:
         exemplars = default_exemplars()
@@ -461,6 +484,10 @@ def run_scout(
     if post_to_discussions and all_techniques:
         title = "[egregore:scout] Review techniques from exemplar projects"
         body = format_discussion_body(all_techniques)
-        post_discussion(title, body, category_id, repo_owner, repo_name)
+        if post_discussion(title, body, category_id, repo_owner, repo_name) is None:
+            raise RuntimeError(
+                f"posting the scout Discussion to {repo_owner}/{repo_name} "
+                "failed; the reason is on stderr"
+            )
 
     return all_techniques

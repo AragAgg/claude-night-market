@@ -85,12 +85,12 @@ When triggered, the hook:
 
 ```yaml
 ---
-queue_entry_id: ${timestamp}_${topic_slug}
+queue_entry_id: "${timestamp}_${topic_slug}"
 created_at: ${iso_timestamp}
-session_type: research
+session_type: "research"
 topic: "${extracted_topic}"
-status: pending_review
-priority: high
+status: "pending_review"
+priority: "high"
 auto_generated: true
 web_searches: ${count}
 ---

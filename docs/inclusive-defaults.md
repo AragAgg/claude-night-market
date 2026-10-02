@@ -5,9 +5,9 @@
 
 ## The principle
 
-Defaults are a form of accessibility. Most users never read
-flags they don't already know about, so opt-in features
-functionally don't exist for them. We default features ON
+Defaults are a form of accessibility. Opt-in features
+functionally don't exist for most users, who never read
+flags they don't already know about. We default features ON
 and expose `--no-X` (or equivalent) for opt-out.
 
 The 1.9.x cycle established the pattern. This doc codifies
@@ -69,9 +69,9 @@ outside the session and is not trivial to undo. Examples:
 **Current examples:**
 
 - Egregore `pipeline.auto_merge`: merges PRs without
-  human review; the entry point (`/egregore:summon`) is
-  already opt-in, so auto-merge gates the no-human-loop
-  transition specifically
+  human review. Because the entry point
+  (`/egregore:summon`) is already opt-in, auto-merge gates
+  the no-human-loop transition specifically
 
 ### 3. No reasonable default value exists
 
@@ -93,8 +93,8 @@ Flipping the default is impossible, not just unwise.
   condition this category describes. The provider chain
   removed the condition rather than argued with it. An
   unconfigured machine now gets a `providers_exhausted`
-  result and does the work locally, so the reasonable
-  default does exist and it is "try, then do it yourself".
+  result and does the work locally. The reasonable
+  default exists, and it is "try, then do it yourself".
   A feature leaves this category by removing the failure,
   not by deciding the failure is acceptable.
 

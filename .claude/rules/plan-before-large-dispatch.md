@@ -25,8 +25,9 @@ this rule was written:
 2. A **Workflow script**. The script is the plan, in a
    form that executes. It carries its own user gate: a
    workflow only runs when the user asks for one, by
-   name or with the `ultracode` keyword, so the
-   alignment this rule exists to force is still forced.
+   name or with the `ultracode` keyword. That gate
+   still forces the alignment this rule exists to
+   force.
 
 Pick path 2 when the shape is known before the work
 (fan out, verify, synthesize, migrate a list). Pick
@@ -69,14 +70,14 @@ overflow this rule was written to prevent.
   fan-out to the end unattended.
 - The `ultracode` keyword does not fire from headless
   routes (`-p`, SDK without a human-origin stamp,
-  scheduled prompts, webhooks), so nothing in egregore
-  or a night run starts one implicitly.
+  scheduled prompts, webhooks). Nothing in egregore or
+  a night run starts one implicitly.
 - A script has no filesystem and no shell. A workflow
   may find, rank and structure. It cannot be the step
   that proves a test passed.
-- No module loading. A script containing `import()`
-  fails before the run starts, so work needing a
-  library belongs inside an agent's task.
+- No module loading. Work needing a library belongs
+  inside an agent's task, because a script containing
+  `import()` fails before the run starts.
 
 Full analysis, with the source for each claim:
 `reports/dynamic-workflows-integration-2026-08-23.md`
@@ -87,15 +88,15 @@ Full analysis, with the source for each claim:
 `.claude/settings.json` sets `workflowSizeGuideline`
 to `medium`, which asks for fewer than 15 agents when
 Claude writes a workflow. That is also the built-in
-default, so the agent count Claude aims for does not
-move. Pinning it does change one thing: a guideline
-you choose replaces the default 25-agent threshold on
-the advisory `Large workflow` warning, so that warning
-fires here at 15 rather than 25, unless an environment
+default, which leaves the agent count Claude aims for
+where it was. Pinning it does change one thing: a
+guideline you choose replaces the default 25-agent
+threshold on the advisory `Large workflow` warning.
+That warning fires here at 15 rather than 25, unless an environment
 override or a server-side gate moves it again. The pin is written
 down so a change to the default cannot silently resize
-the four workflows this repo ships, whose agent counts
-were sized against it. The key needs Claude Code
+the workflows this repo ships, whose agent counts were
+sized against it. The key needs Claude Code
 v2.1.219 or later. Before that the effective
 guideline is `unrestricted`.
 
@@ -129,23 +130,23 @@ Two things follow from pinning it in a settings file:
 
 Project settings may bound what a workflow spends.
 They may not enable the capability that does the
-spending. `workflowSizeGuideline` bounds, so it is
-pinned. `enableWorkflows`, `disableWorkflows` and
+spending. `workflowSizeGuideline` is pinned because
+it bounds. `enableWorkflows`, `disableWorkflows` and
 `ultracode` switch a billable feature on or off for
-everyone who clones the repo, so that stays with the
-person, not the checkout.
+everyone who clones the repo. That choice stays with
+the person, not the checkout.
 
 `ultracode` is the one that matters most. It would
 have Claude plan a workflow for every substantive
 task, which is the unasked start the first constraint
 above forbids. CLI 2.1.241 does not validate the key,
-and an unrecognized key is dropped without an error,
-so setting it would be honored or ignored silently
-with no signal either way. The test is what notices.
+and an unrecognized key is dropped without an error.
+Setting it would be honored or ignored silently, with
+no signal either way. The test is what notices.
 
 One consequence to know before you go looking: the
 docs say that when workflows are off, the bundled
-workflow commands become unavailable, and the four
+workflow commands become unavailable, and the ones
 this repo ships presumably go with them. A
 contributor whose plan has workflows off will not see
 `/pensive:unified-review` or its siblings. Turning
@@ -153,7 +154,7 @@ them on belongs in their `/config`, not in this
 file.
 
 The guideline sizes a run before it starts. Nothing
-in it measures what a run cost, so pair it with
+in it measures what a run cost. Pair it with
 `Skill(conserve:agent-expenditure)` afterward.
 
 **Prefer tiered audit over full-codebase dispatch:**

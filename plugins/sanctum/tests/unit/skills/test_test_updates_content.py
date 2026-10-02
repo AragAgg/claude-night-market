@@ -327,3 +327,27 @@ class TestInvariantEncodingPhaseContent:
         assert "design-decision" in skill_content.lower() or (
             "design" in skill_content.lower() and "decision" in skill_content.lower()
         )
+
+
+class TestStructureMappingModule:
+    """Feature: test-updates maps code structure before choosing test targets.
+
+    As the test-updates workflow on an unfamiliar codebase
+    I want the layout, languages and large files mapped first
+    So that generated tests land beside the code they cover.
+    """
+
+    SKILL_DIR = Path(__file__).parents[3] / "skills" / "test-updates"
+
+    def test_skill_lists_structure_mapping_module(self) -> None:
+        """Scenario: the hub declares and routes to the module."""
+        skill = (self.SKILL_DIR / "SKILL.md").read_text()
+        assert "modules/structure-mapping.md" in skill
+        assert "\n- file-analysis\n" not in skill
+
+    def test_module_maps_layout_languages_and_hotspots(self) -> None:
+        """Scenario: the module names each mapping step and its command."""
+        module = (self.SKILL_DIR / "modules" / "structure-mapping.md").read_text()
+        assert "tree -L 2 -d" in module
+        assert "wc -l" in module
+        assert "tests/" in module

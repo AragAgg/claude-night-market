@@ -110,6 +110,12 @@ which power the leaderboard. Memcached would use less memory
 but require additional application logic."
 ```
 
+Give reasoning where a reader weighs a choice. A consequence
+appended to every fact ("the index was stale, so the lookup
+missed") is narration. Delete it when the reader can infer it, or
+follow the rewrite order in `Skill(scribe:slop-detector)` module
+`structural-patterns.md`, section "Consequence Tail".
+
 ## Ending Patterns
 
 ### What to Avoid

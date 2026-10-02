@@ -106,6 +106,7 @@ estimated_tokens: 350
    | `--` as prose punctuation | colon or rewrite |
    | arrows `->` / `→` as connectors | `to` / `into` |
    | smart quotes `“ ” ‘ ’` | straight `"` and `'` |
+   | a `, so` tail after fact after fact | delete a consequence the reader can infer, else its own sentence |
 
 4b. **Subject-matter check** (Contract B): describe the change by its
    reader-facing effect. Name neither the AI origin nor the specific
@@ -139,5 +140,7 @@ estimated_tokens: 350
       message
 - [ ] Character-level check passes: no em-dashes, no `+` as prose
       conjunction, no smart quotes, no `->` as prose connector
+- [ ] Body carries at most one `, so` consequence tail
+      (`scripts/slop_score.py --audit` lists each as `so_connective`)
 - [ ] If nothing is staged, skill halts immediately and reports
       "nothing staged" without producing a commit message

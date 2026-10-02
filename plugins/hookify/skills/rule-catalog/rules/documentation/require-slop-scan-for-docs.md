@@ -30,7 +30,8 @@ carries the full method.
 |------|-----------|
 | Em dash, or a spaced `--` used as one | A colon, a period, or parentheses. Target zero in new prose |
 | Plus-sign for "and" in prose: "hooks + skills" | "hooks and skills" |
-| Semicolon splicing two clauses | Two sentences, or "and" / "but" / "so". Restructure rather than swap in a dash |
+| Semicolon splicing two clauses | Two sentences, or "and" / "but". Restructure rather than swap in a dash or a ", so" |
+| Consequence tails: "X, so Y", "X, so that Y", above 2.0 per 1000 words | Delete a consequence the reader can infer. Otherwise its own sentence, or lead with the cause |
 | Contrastive negation: "It's not X, it's Y", "X, not Y", ", not just Y" | State the affirmed half. Delete the negated one |
 | Over-explained fixes: "in order to", "this ensures that", "the reason for this is" | State the defect and the change, then stop |
 | Negative framing: "not uncommon", "cannot be overstated", "does not support X" | The positive form. A negation that carries a fact stays |

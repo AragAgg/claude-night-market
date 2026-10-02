@@ -228,7 +228,6 @@ These tasks are deterministic, rule-based, and don't require reasoning:
 |-----------|------|-----------|
 | `commit-msg` | command | Conventional commit formatting |
 | `version-updates` | skill | Semantic versioning rules |
-| `file-analysis` | skill | File structure enumeration |
 | `git-workspace-review` | skill | Git status/diff parsing |
 
 ### Conservation Plugin

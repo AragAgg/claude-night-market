@@ -52,13 +52,19 @@ Before claiming understanding of any code:
 
 ### Thought-Level Red Flags
 
-| Thought Pattern | Reality Check | Action |
-|-----------------|---------------|--------|
-| "The AI said this is correct" | AI sounds confident but may be wrong | Verify independently |
-| "This is how [big company] does it" | They have different constraints | Evaluate YOUR context |
-| "It's a best practice" | Best for whom? When? | Identify specific benefit |
-| "Modern applications have this" | Appeal to novelty | Identify concrete need |
-| "I found this on Stack Overflow" | Popular =/= correct for you | Understand before adopting |
+An appeal to authority or popularity replaces a reason. Adopt the
+pattern once the reason is found and it applies to this context:
+
+- "The AI said this is correct": AI output sounds confident whether
+  or not it is right, so verify it independently.
+- "This is how [big company] does it": their constraints differ, so
+  evaluate the choice against this project's.
+- "It's a best practice": name the specific benefit and who it is
+  best for, since a practice is best only under its conditions.
+- "Modern applications have this": novelty is not a need. Identify
+  the concrete one.
+- "I found this on Stack Overflow": a popular answer solved someone
+  else's problem. Understand it before adopting it.
 
 ### AI-Specific Red Flags
 

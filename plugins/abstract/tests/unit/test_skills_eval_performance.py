@@ -297,8 +297,8 @@ class TestIdentifyBottlenecks:
         """Scenario: Fast tool below threshold is not a bottleneck."""
         bottlenecks = empty_analyzer.identify_bottlenecks(benchmark_with_slow_tool)
         names = [b["tool"] for b in bottlenecks]
-        # fast-tool might be bottleneck if it's 2x avg, but 0.001 < 2*0.01 = 0.02
-        assert "fast-tool" not in names or True  # conservative
+        # 0.001 is under both SLOW_THRESHOLD and twice the 0.01 average.
+        assert "fast-tool" not in names
 
     @pytest.mark.unit
     def test_empty_tools_returns_empty(

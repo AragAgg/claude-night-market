@@ -30,7 +30,13 @@ we deliberately gave up. Records the *why*, not just the *what*.
 
 ### Context & problem
 
-quality_checker.py scored a 37-test file at 0/100 while every test passed and every branch it guarded was covered. Two of the four causes were rules that punished shapes which were not defects: an assertion was called vague whenever the compared variable was named `result`, and deductions were counted per issue with no cap, so file length decided the score. Both rules had existing tests pinning them, so revising them meant changing assertions that a reader could mistake for deliberate invariants.
+quality_checker.py scored a 37-test file at 0/100 while every test passed and
+every branch it guarded was covered. Two of the four causes were rules that
+punished shapes which were not defects: an assertion was called vague whenever
+the compared variable was named `result`, and deductions, counted per issue with
+no cap, let file length decide the score. Both rules had existing tests pinning
+them. Revising them meant changing assertions that a reader could mistake for
+deliberate invariants.
 
 ### Decision drivers
 
@@ -59,7 +65,10 @@ In the context of scoring test quality, facing a rubric that returned 0/100 for 
 ### Consequences
 
 - Positive: The same file scores 88 where it scored 0, a file with no assertions and no docstrings scores 28, and every result carries a score_breakdown naming the deduction per category
-- Negative / debt accepted: Reversal is one predicate (`_is_vague_result_assertion`) plus its three tests, so this is cheap to undo if the naming smell turns out to be worth the false positives. Revisit if reviewers start seeing `result` variables spread through new test files
+- Negative / debt accepted: Reversal is one predicate
+  (`_is_vague_result_assertion`) plus its three tests, a cheap undo if the
+  naming smell turns out to be worth the false positives. Revisit if reviewers
+  start seeing `result` variables spread through new test files
 
 ## TR-002: Retiring the coercion apparatus in favour of a strength budget
 
@@ -87,8 +96,8 @@ exactly the situations the author never saw.
 
 ### Decision drivers
 
-- None of the four had zero references, so none met the strict auto-delete bar.
-  The case had to be made on subject matter.
+- Because each of the four had at least one reference, none met the strict
+  auto-delete bar. The case had to be made on subject matter.
 - A large cull could not be justified on duplication. Measured against the
   GitSkills baseline (3,797,117 public `SKILL.md` files, 50.5% byte-identical
   copies), this repository's 759 skill files have 759 distinct contents and zero

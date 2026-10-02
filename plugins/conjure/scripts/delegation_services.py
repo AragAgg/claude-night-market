@@ -146,8 +146,9 @@ class ServiceConfig:
     # ``--prompt=-x``. A separator does not protect a flag's value: probed on
     # 2026-08-22, ``gemini -p -- --help`` still printed the help page while
     # ``gemini --prompt=--help`` reached authentication. Positional providers
-    # need no entry here; they take ``--`` instead.
-    prompt_long_flag: str | None = None
+    # need no entry here; they take ``--`` instead. The default pairs with
+    # the default ``-p``: both are the Gemini spelling.
+    prompt_long_flag: str | None = "--prompt"
     # None where the CLI takes no format value. muse and codex offer only a
     # boolean ``--json``, which a flag-and-value pair cannot express.
     # How this CLI is told which model to use. `--model` was hardcoded at
@@ -227,20 +228,45 @@ class ServiceConfig:
     strengths: tuple[str, ...] = ()
 
     def __post_init__(self) -> None:
-        """Reject an auth_method outside the set the code branches on.
+        """Reject a config the argv builder or the verifier cannot honor.
 
         ``_apply_overrides`` validates field names, not their values, so
-        a config saying ``auth_method: apikey`` constructed cleanly and
-        then matched neither the ``api_key`` branch nor the ``cli`` one:
-        the service skipped both the auth probe and the API-key check and
-        reported itself configured while authenticating against nothing.
+        each of these constructed cleanly and failed later. A misspelled
+        ``auth_method`` matched neither the ``api_key`` branch nor the
+        ``cli`` one, and the service reported itself configured while
+        authenticating against nothing. The pairings below fail the same
+        way, one at argv time and the rest by checking nothing.
         """
         if self.auth_method not in AUTH_METHODS:
-            msg = (
-                f"{self.name!r}: auth_method {self.auth_method!r} is not one "
-                f"of {sorted(AUTH_METHODS)}"
+            self._refuse(
+                f"auth_method {self.auth_method!r} is not one of {sorted(AUTH_METHODS)}"
             )
-            raise ValueError(msg)
+        # _prompt_argv needs the long form to attach a dash-leading prompt,
+        # and raises at call time without it.
+        if (
+            self.prompt_flag is not None
+            and not self.stdin_prompt
+            and not self.prompt_long_flag
+        ):
+            self._refuse(
+                f"prompt_long_flag is required with prompt_flag "
+                f"{self.prompt_flag!r}, or a dash-leading prompt cannot be sent"
+            )
+        # build_command appends the flag alone. With no flag the request
+        # for machine-readable output is dropped without a word.
+        if self.output_format_is_boolean and self.output_format_flag is None:
+            self._refuse("output_format_is_boolean needs an output_format_flag")
+        # credential_issues and the doctor both skip an api_key provider
+        # that names no variable, so it reads as configured.
+        if self.auth_method == "api_key" and not self.auth_env_var:
+            self._refuse("auth_env_var is required when auth_method is 'api_key'")
+        # verify_service reads these only after running readiness_probe.
+        for name in ("readiness_expect", "readiness_hint"):
+            if getattr(self, name) and not self.readiness_probe:
+                self._refuse(f"{name} is never checked without a readiness_probe")
+
+    def _refuse(self, reason: str) -> None:
+        raise ValueError(f"{self.name!r}: {reason}")
 
 
 def _apply_overrides(

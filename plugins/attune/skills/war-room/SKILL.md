@@ -86,8 +86,8 @@ See `modules/reversibility-assessment.md` for full scoring guide.
 |------|-------|---------|
 | Supreme Commander | Claude Opus | Final synthesis |
 | Chief Strategist | Claude Sonnet | Approach generation |
-| Intelligence Officer | Gemini 2.5 Pro | Large context analysis (1M+) |
-| Field Tactician | GLM-5.2 | Implementation feasibility |
+| Intelligence Officer | Gemini 3 Pro | Large context analysis (1M+) |
+| Field Tactician | GLM-5.3 | Implementation feasibility |
 | Scout | Qwen Turbo | Quick data gathering |
 | Red Team Commander | Gemini Flash | Adversarial challenge |
 | Logistics Officer | Qwen Max | Resource estimation |
@@ -160,7 +160,7 @@ Sessions persist to the **Strategeion** (War Palace):
 Experts are invoked via conjure delegation:
 - `conjure:gemini-delegation` for Gemini models
 - `conjure:qwen-delegation` for Qwen models
-- Direct CLI for GLM-5.2 (`ccgd` or `claude-glm --dangerously-skip-permissions`)
+- Direct CLI for GLM-5.3 (`ccgd` or `claude-glm`, via `get_glm_command()`)
 
 Delegation being on by default changes nothing here, because a War Room
 delegates by construction: a panel is external models or it is not a

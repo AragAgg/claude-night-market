@@ -4,14 +4,15 @@ name: Python 3.9 Hook Compatibility (issue #204)
 # remain importable and testable under Python 3.9 (the minimum
 # version required for system Python support).
 #
-# Plugins covered: abstract, memory-palace, sanctum, conserve,
-# imbue, leyline, egregore, tome, gauntlet, cartograph, oracle,
-# pensive.
+# Plugins covered: every plugins/*/hooks directory. The trigger and the
+# ruff step use globs, so a new plugin is covered without an edit here.
+# The pytest matrix is listed by hand because each plugin names its own
+# hook test subset; tests/test_ci_hand_kept_lists.py keeps it honest.
 #
 # Two gates per plugin:
-#   1. ruff UP007: flags bare `X | Y` union annotations that
-#      require Python 3.10+ without `from __future__ import
-#      annotations`.
+#   1. ruff FA102: flags `X | Y` union annotations in modules that lack
+#      `from __future__ import annotations`, which raise TypeError at
+#      import time on Python 3.9.
 #   2. pytest hooks: runs only the tests that exercise hook
 #      scripts under CPython 3.9.
 
@@ -19,33 +20,11 @@ on:
   push:
     branches: [main, master]
     paths:
-      - "plugins/abstract/hooks/**"
-      - "plugins/cartograph/hooks/**"
-      - "plugins/conserve/hooks/**"
-      - "plugins/egregore/hooks/**"
-      - "plugins/gauntlet/hooks/**"
-      - "plugins/imbue/hooks/**"
-      - "plugins/leyline/hooks/**"
-      - "plugins/memory-palace/hooks/**"
-      - "plugins/oracle/hooks/**"
-      - "plugins/pensive/hooks/**"
-      - "plugins/sanctum/hooks/**"
-      - "plugins/tome/hooks/**"
+      - "plugins/*/hooks/**"
       - ".github/workflows/python39-compat.yml"
   pull_request:
     paths:
-      - "plugins/abstract/hooks/**"
-      - "plugins/cartograph/hooks/**"
-      - "plugins/conserve/hooks/**"
-      - "plugins/egregore/hooks/**"
-      - "plugins/gauntlet/hooks/**"
-      - "plugins/imbue/hooks/**"
-      - "plugins/leyline/hooks/**"
-      - "plugins/memory-palace/hooks/**"
-      - "plugins/oracle/hooks/**"
-      - "plugins/pensive/hooks/**"
-      - "plugins/sanctum/hooks/**"
-      - "plugins/tome/hooks/**"
+      - "plugins/*/hooks/**"
       - ".github/workflows/python39-compat.yml"
   workflow_dispatch:
 
@@ -56,12 +35,12 @@ concurrency:
 jobs:
   # ------------------------------------------------------------------ #
   # Gate 1: Static syntax check                                          #
-  # Ruff UP007 detects `X | Y` union annotations on files that lack     #
+  # Ruff FA102 detects `X | Y` union annotations on files that lack     #
   # `from __future__ import annotations`, which would raise a           #
   # TypeError at import time on Python 3.9.                             #
   # ------------------------------------------------------------------ #
   syntax-check:
-    name: ruff UP007 union annotation syntax
+    name: ruff FA102 union annotation syntax
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -72,31 +51,22 @@ jobs:
           python-version: "3.9"
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v10.0.1
+        uses: astral-sh/setup-uv@v10.2.0
 
       - name: Install ruff
         run: uv tool install ruff
 
-      - name: Check hook files for 3.10+ union syntax (UP007)
-        # UP007: Use `X | Y` for type annotations; ruff flags this when
-        # the file would fail on Python 3.9 without the future import.
-        # We target only the hooks directories of the six plugins.
+      - name: Check hook files for 3.10+ union syntax (FA102)
+        # FA102 flags a PEP 604 union in a module targeting py39 without the
+        # future import. UP007 cannot stand in for it: UP007 rewrites
+        # Optional[X] into X | Y and exits 0 on `int | None` at py39.
+        # The glob expands to every plugin's hooks directory; ruff accepts
+        # a directory that holds no Python files.
         run: |
           ruff check \
-            --select UP007 \
+            --select FA102 \
             --target-version py39 \
-            plugins/abstract/hooks/ \
-            plugins/cartograph/hooks/ \
-            plugins/conserve/hooks/ \
-            plugins/egregore/hooks/ \
-            plugins/gauntlet/hooks/ \
-            plugins/imbue/hooks/ \
-            plugins/leyline/hooks/ \
-            plugins/memory-palace/hooks/ \
-            plugins/oracle/hooks/ \
-            plugins/pensive/hooks/ \
-            plugins/sanctum/hooks/ \
-            plugins/tome/hooks/
+            plugins/*/hooks/
 
   # ------------------------------------------------------------------ #
   # Gate 2: Runtime hook tests under Python 3.9                         #
@@ -118,14 +88,26 @@ jobs:
             hook_test_path: tests/unit/test_context_warning.py tests/unit/test_permission_request.py
           - plugin: egregore
             hook_test_path: tests/test_session_start_hook.py
+          - plugin: gauntlet
+            hook_test_path: tests/unit/test_graph_auto_update.py tests/unit/test_precommit.py
+          - plugin: herald
+            hook_test_path: tests/unit/test_double_shot_latte.py
+          - plugin: hookify
+            hook_test_path: tests/test_rule_guard_hook.py
           - plugin: imbue
             hook_test_path: tests/unit/hooks
           - plugin: leyline
             hook_test_path: tests/hooks
           - plugin: memory-palace
             hook_test_path: tests/hooks
+          - plugin: oracle
+            hook_test_path: tests/unit/test_daemon_lifecycle.py
+          - plugin: pensive
+            hook_test_path: tests/unit/test_pr_blast_radius.py
           - plugin: sanctum
             hook_test_path: tests/hooks
+          - plugin: tome
+            hook_test_path: tests/unit/test_pre_compact.py tests/unit/test_session_start.py tests/unit/test__session_utils.py
 
     steps:
       - uses: actions/checkout@v7
@@ -136,7 +118,7 @@ jobs:
           python-version: "3.9"
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v10.0.1
+        uses: astral-sh/setup-uv@v10.2.0
 
       # Hook scripts use only stdlib; we install pytest in an
       # isolated venv to avoid the plugin's requires-python

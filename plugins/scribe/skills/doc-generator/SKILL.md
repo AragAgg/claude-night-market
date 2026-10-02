@@ -43,7 +43,8 @@ for the full rubric.
 
 ## When NOT To Use
 
-- Converting an external file into markdown (use `scribe:doc-importer`)
+- Converting an external file into markdown (use
+  `leyline:document-conversion` and its `project-import` module)
 - Scanning existing prose for AI patterns (use `scribe:slop-detector`)
 
 ## Core Writing Principles

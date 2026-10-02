@@ -122,8 +122,8 @@ they are right.
 
 The third row is the reason this rule keeps its exceptions. Precision
 constraints are exactly the trust boundaries and machine contracts
-listed above, and they are where added structure helps least, so
-stating them plainly and once matters more than stating them loudly.
+listed above. Because added structure helps least there, stating them
+plainly and once matters more than stating them loudly.
 
 ### What GitSkills does and does not say
 
@@ -131,8 +131,8 @@ stating them plainly and once matters more than stating them loudly.
 3,797,117 `SKILL.md` files from 282,200 public repositories in July
 2026 and found 1,877,981 distinct contents. Slightly over half of all
 skill files in public GitHub are byte-identical copies of another
-file: the format has no registry and no package manager, so it spreads
-by copying folders.
+file: with no registry and no package manager, the format spreads by
+copying folders.
 
 That is a corpus finding about distribution. **It measures nothing
 about reasoning, prompt complexity, or instruction load**, and it must

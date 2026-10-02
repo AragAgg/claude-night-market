@@ -27,7 +27,7 @@ PLUGIN_JSON = PLUGIN_DIR / ".claude-plugin" / "plugin.json"
 MODULE_FILE = (
     PLUGIN_DIR
     / "skills"
-    / "compression-strategy"
+    / "context-optimization"
     / "modules"
     / "log-debugging-hygiene.md"
 )

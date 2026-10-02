@@ -516,7 +516,9 @@ class TestEndToEnd:
             hook_output = response["hookSpecificOutput"]
 
             assert hook_output["hookEventName"] == "PreToolUse"
-            assert hook_output["permissionDecision"] == "allow"
+            # Adding context must not approve the web call on the user's
+            # behalf: "allow" would skip their permission prompt.
+            assert "permissionDecision" not in hook_output
             assert "additionalContext" in hook_output
             assert "intakeFlagPayload" in hook_output
             assert "intakeDecisionRationale" in hook_output

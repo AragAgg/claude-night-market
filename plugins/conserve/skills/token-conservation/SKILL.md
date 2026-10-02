@@ -6,6 +6,8 @@ progressive_loading: true
 dependencies:
   hub: []
   modules: []
+modules:
+- modules/source-selection.md
 model_hint: standard
 ---
 # Token Conservation Workflow
@@ -52,6 +54,11 @@ model_hint: standard
   sessions permanently (fixed in 2.1.31).
 - Convert prose instructions into bullet lists before prompting so only essential
   info hits the model.
+
+- Before a web search or fetch, decide whether the claim needs a
+  source at all. `modules/source-selection.md` sorts claims into those
+  worth citing (versions, performance, security, APIs, pricing) and
+  those that are not, with the token cost of each approach.
 
 ## Step 3 – Delegation Check (`delegation-check`)
 - Evaluate whether compute-intensive tasks can go to Qwen MCP or other external
@@ -103,3 +110,6 @@ or justify why neither was necessary, to inform future context-handling decision
   recommendation, or a justification for why neither is needed
 - [ ] No additional file reads taken after the read budget is
   exhausted without explicit user approval in the same session
+- [ ] Every version, performance, security, API or pricing claim in
+  the output carries a citation or an uncertainty marker, per
+  `modules/source-selection.md`

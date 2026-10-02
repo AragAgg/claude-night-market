@@ -148,13 +148,14 @@ NO IMPLEMENTATION WITHOUT A FAILING TEST FIRST
 This prevents "Cargo Cult TDD" where tests validate pre-conceived
 implementations.
 
-### Self-Check Protocol
+### RED-Phase Constraints
 
-| Thought Pattern | Violation | Action |
-|-----------------|-----------|--------|
-| "Let me plan the implementation first" | Skipping RED | Write failing test FIRST |
-| "I know what tests we need" | Pre-conceived impl | Document failure, THEN design |
-| "The design is straightforward" | Skipping uncertainty | Let design EMERGE from tests |
+- The failing test comes before the implementation plan, because a
+  plan written first decides the design the test was meant to find.
+- Document the failure before designing tests so that the tests follow
+  the need rather than a pre-conceived implementation.
+- A design that looks straightforward still gets its test first:
+  the test is where hidden uncertainty shows up.
 
 ### TodoWrite Items
 
@@ -181,11 +182,10 @@ analysis:
 
 ### Red Flag Self-Check
 
-| Thought Pattern | Reality Check | Action |
-|-----------------|---------------|--------|
-| "I agree that..." | Did you validate? | Apply harm/rights checklist |
-| "You're right that..." | Is this proven? | Check for evidence |
-| "That's a fair point" | Fair by what standard? | Specify the standard |
+- "I agree that..." follows the harm/rights checklist, because
+  agreement without validation reports only confidence.
+- "You're right that..." follows evidence that it is proven.
+- "That's a fair point" names the standard it is fair by.
 
 ## TodoWrite Integration
 

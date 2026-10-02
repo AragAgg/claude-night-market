@@ -18,8 +18,8 @@ places that were never wired to each other:
 
 No test anchored any of them, and they had already drifted: the command
 grew two sections and two checklist items the module never learned
-about. This repository also had no `.github/PULL_REQUEST_TEMPLATE.md`,
-so PRs opened against it inherited nothing.
+about. This repository also had no `.github/PULL_REQUEST_TEMPLATE.md`
+for PRs opened against it to inherit.
 
 The ask that prompted this ADR was to make descriptions short while
 covering six dimensions: who the change is for, what it consists of,
@@ -27,7 +27,7 @@ where it applies inside the codebase and across external connections,
 when it lands and when it is fully integrated, why it was undertaken,
 and how it was built. Manual test plans attach when applicable.
 
-Those two goals pull against each other, so the decision below is
+Those two goals pull against each other. The decision below is
 mostly about which dimensions earn a heading.
 
 ## Research basis
@@ -49,7 +49,7 @@ especially why, on the grounds that source code shows what software
 does but never why it exists. Their named negative examples are
 "Fix bug" and "Phase 1".
 
-**Fixed-length forms decay.** Attention is a fixed budget, so a
+**Fixed-length forms decay.** Because attention is a fixed budget, a
 fifteen-item checklist gets less real scrutiny per item than a
 five-item one. Once a contributor learns that a section is safely left
 blank, the credibility of every other section falls with it. This is
@@ -73,8 +73,7 @@ A description carries all six dimensions, in two registers chosen by
 how much prose each dimension actually needs.
 
 **Register one, a facts table.** Who, Where, and When are lookups, not
-arguments. Each is one table row, so all three cost three lines
-together:
+arguments. Each is one table row, three lines for all three together:
 
 ```markdown
 | | |
@@ -118,8 +117,8 @@ consumer drifts:
    `plugins/sanctum/commands/prepare-pr.md`, synced to the same names.
 3. `.github/PULL_REQUEST_TEMPLATE.md` plus a
    `.github/PULL_REQUEST_TEMPLATE/` directory of size-tiered variants.
-4. A pytest contract in `plugins/sanctum/tests/`, so deleting a section
-   from any copy turns a test red.
+4. A pytest contract in `plugins/sanctum/tests/` that turns a test red
+   when a section is deleted from any copy.
 
 ## Rejected alternatives
 
@@ -148,7 +147,7 @@ test plan rather than by acquiring new headings.
 
 The contract test is the load-bearing part. Without it the three copies
 drift again, which is the state this ADR was written to end. The test
-anchors on section names, so renaming a section is a deliberate act
+anchors on section names. Renaming a section is then a deliberate act
 that updates the test in the same commit.
 
 The size-tiered variants add three files that GitHub cannot surface in

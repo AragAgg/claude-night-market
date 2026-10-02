@@ -173,3 +173,30 @@ def test_slop_trigger_covers_the_scorer_and_what_it_loads(scorer_input: str) -> 
     assert any(f.match(scorer_input) for f in filters), (
         f"{scorer_input} does not trigger {SLOP_WORKFLOW.name}"
     )
+
+
+@pytest.mark.parametrize(
+    "plugin_code",
+    (
+        "plugins/herald/hooks/double_shot_latte.py",
+        "plugins/scribe/src/scribe/negation.py",
+    ),
+)
+def test_ci_trigger_covers_plugin_hooks_and_src(plugin_code: str) -> None:
+    """A hook-only or src-only change must run the root suite.
+
+    GIVEN a pull request that touches only a plugin's hooks/ or src/
+    WHEN ecosystem-tests.yml evaluates its path filters
+    THEN the workflow runs
+
+    ``test_hooks_import_without_project_deps.py`` imports every registered
+    hook under a blocked pyyaml, and hooks import through ``src/``
+    packages. Neither directory was in the filter, so the change that
+    breaks a hook's import chain was the one change that skipped the
+    guard for it.
+    """
+    assert (REPO_ROOT / plugin_code).is_file(), f"{plugin_code} moved"
+    filters = _workflow_path_filters()
+    assert any(f.match(plugin_code) for f in filters), (
+        f"{plugin_code} does not trigger {WORKFLOW.name}"
+    )

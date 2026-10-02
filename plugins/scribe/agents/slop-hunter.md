@@ -55,6 +55,8 @@ Context-dependent markers:
 - ASCII / Unicode arrow as prose connector (`->`, `→`)
 - Smart quotes outside code blocks ("text", 'text')
 - Three-fragment burst ("Focused. Aligned. Measurable.")
+- ", so" consequence tails > 2/1000 words (report each, never
+  auto-fix: one is ordinary English)
 
 ### Tier 5: 2026 Patterns (Score 3-4 each)
 

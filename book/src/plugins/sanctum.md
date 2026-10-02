@@ -19,7 +19,6 @@ It's the plugin you'll use most during active coding.
 | Skill | Description | When to Use |
 |-------|-------------|-------------|
 | `git-workspace-review` | Preflight repo state analysis | Before any git operation |
-| `file-analysis` | Codebase structure mapping | Understanding project layout |
 | `commit-messages` | Conventional commit generation | After staging changes |
 | `pr-prep` | PR preparation with quality gates | Before creating PRs |
 | `pr-review` | PR analysis and feedback, supports `--local` for file output | Reviewing others' PRs |
@@ -159,8 +158,6 @@ git-workspace-review (foundation)
 ├── pr-prep
 ├── doc-updates
 └── version-updates
-
-file-analysis (standalone)
 ```
 
 Always run `git-workspace-review` first to establish context.

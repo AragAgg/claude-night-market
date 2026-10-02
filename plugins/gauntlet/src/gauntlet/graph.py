@@ -18,63 +18,7 @@ from gauntlet.models import EdgeKind, GraphEdge, GraphNode, NodeKind
 try:
     from leyline.sqlite_graph_base import SqliteGraphBase
 except ImportError:  # pragma: no cover -- standalone fallback
-    # Minimal inline base when leyline is not installed.
-    import sqlite3 as _sqlite3
-    from pathlib import Path as _Path
-
-    class SqliteGraphBase:  # type: ignore[no-redef]  # fallback when leyline not installed
-        """Minimal fallback for connection management."""
-
-        _schema_sql: str = ""
-        _fts_create_sql: str = ""
-        _batch_size: int = 450
-
-        def __init__(self, db_path: str | _Path) -> None:
-            """Open (creating if needed) the SQLite file at *db_path* and apply the schema.
-
-            Closes the connection and re-raises if schema initialization fails,
-            so a partially-initialized database is never left open.
-            """
-            self._db_path = str(db_path)
-            self._conn: _sqlite3.Connection = _sqlite3.connect(self._db_path)
-            self._conn.execute("PRAGMA journal_mode=WAL")
-            self._conn.execute("PRAGMA foreign_keys=ON")
-            self._conn.row_factory = _sqlite3.Row
-            self._has_fts: bool = False
-            try:
-                self._init_schema()
-            except Exception:
-                self._conn.close()
-                raise
-
-        def _init_schema(self) -> None:
-            self._conn.executescript(self._schema_sql)
-            if self._fts_create_sql:
-                try:
-                    self._conn.executescript(self._fts_create_sql)
-                    self._has_fts = True
-                except _sqlite3.OperationalError as exc:
-                    _log.warning("FTS5 unavailable: %s", exc)
-            self._conn.commit()
-
-        def close(self) -> None:
-            """Close the underlying SQLite connection, releasing its file lock."""
-            self._conn.close()
-
-        def __enter__(self) -> SqliteGraphBase:
-            """Enter the context manager, returning self for use in a ``with`` block."""
-            return self
-
-        def __exit__(self, *exc: object) -> None:
-            """Close the connection on context-manager exit, regardless of exception."""
-            self.close()
-
-        def table_names(self) -> list[str]:
-            """Return the names of all tables in the connected SQLite database."""
-            rows = self._conn.execute(
-                "SELECT name FROM sqlite_master WHERE type='table'"
-            ).fetchall()
-            return [r["name"] for r in rows]
+    from gauntlet._vendored_leyline_sqlite_graph_base import SqliteGraphBase
 
 
 _log = logging.getLogger(__name__)
@@ -271,6 +215,64 @@ class GraphStore(SqliteGraphBase):
             ),
         )
         self._conn.commit()
+
+    def resolve_call_targets(self) -> int:
+        """Point CALLS edges at the node that defines their callee.
+
+        The parser records a callee by the name written at the call site.
+        Everything that walks CALLS edges (flows, communities, blast
+        radius) looks the target up by qualified name, so an unresolved
+        edge is invisible to all of them. A bare name that exactly one
+        definition matches, preferring a definition in the calling file,
+        is rewritten to that definition. Calls into the standard library
+        or a dependency stay bare and count as external.
+
+        One pass over the nodes builds the name index; the edges are then
+        resolved in memory, because a plugin-wide graph has tens of
+        thousands of stdlib calls and a table scan per edge does not end.
+
+        Returns the number of edges rewritten.
+        """
+        by_bare: dict[str, list[tuple[str, str]]] = {}
+        for qualified_name, file_path in self._conn.execute(
+            "SELECT qualified_name, file_path FROM nodes WHERE kind != ?",
+            (str(NodeKind.FILE),),
+        ):
+            bare = qualified_name.rsplit("::", 1)[-1].rsplit(".", 1)[-1]
+            by_bare.setdefault(bare, []).append((qualified_name, file_path))
+
+        unresolved = self._conn.execute(
+            """SELECT e.id, e.source_qn, e.target_qn, e.file_path FROM edges e
+               WHERE e.kind = ?
+                 AND NOT EXISTS (
+                   SELECT 1 FROM nodes n WHERE n.qualified_name = e.target_qn
+                 )""",
+            (str(EdgeKind.CALLS),),
+        ).fetchall()
+
+        resolved = 0
+        with self._conn:
+            for edge_id, source_qn, target, edge_file in unresolved:
+                candidates = by_bare.get(target.rsplit(".", 1)[-1], [])
+                local = [qn for qn, fp in candidates if fp == edge_file]
+                if len(local) == 1:
+                    chosen = local[0]
+                elif len(candidates) == 1:
+                    chosen = candidates[0][0]
+                else:
+                    continue
+                duplicate = self._conn.execute(
+                    "SELECT 1 FROM edges WHERE kind = ? AND source_qn = ? AND target_qn = ?",
+                    (str(EdgeKind.CALLS), source_qn, chosen),
+                ).fetchone()
+                if duplicate:
+                    self._conn.execute("DELETE FROM edges WHERE id = ?", (edge_id,))
+                else:
+                    self._conn.execute(
+                        "UPDATE edges SET target_qn = ? WHERE id = ?", (chosen, edge_id)
+                    )
+                resolved += 1
+        return resolved
 
     def get_edges_by_source(self, qualified_name: str) -> list[GraphEdge]:
         """Fetch all outgoing edges from a node."""

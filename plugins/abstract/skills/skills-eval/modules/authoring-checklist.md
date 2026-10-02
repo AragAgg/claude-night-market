@@ -42,14 +42,15 @@ Quick-reference validation checklist for skill authors.
 - [ ] Documented baseline failures verbatim
 - [ ] Tested with skill present
 - [ ] Identified rationalizations
-- [ ] Added explicit counters
+- [ ] Stated each boundary they crossed as a constraint with its reason
 
-## Anti-Rationalization
+## Intent, Constraints, Exit Criteria
 
+- [ ] States the intended outcome and why it matters
+- [ ] Each constraint names what is behind it
 - [ ] Listed specific exceptions
-- [ ] Created rationalization table
-- [ ] Added red flags list
-- [ ] Addressed "spirit vs letter" arguments
+- [ ] Has an `## Exit Criteria` section with observable criteria
+- [ ] No rationalization table or required declaration
 
 ## Scripts (if applicable)
 

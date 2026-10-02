@@ -11,11 +11,13 @@ from __future__ import annotations
 
 import shlex
 from collections.abc import Sequence
+from dataclasses import replace
 from pathlib import Path
 
 import night_run
 import pytest
 from budget import Budget
+from handoff_gate import Handoff
 
 
 class FakeRunner:
@@ -82,26 +84,27 @@ def mktask(tid: str, deps: list[str], expect: str = "pass") -> dict:
     }
 
 
-HANDOFF = {
-    "item": "NS-001",
-    "branch": "night/NS-001",
-    "base_branch": "main",
-    "worktree": ".egregore/worktrees/NS-001",
-    "scope": {"allow_paths": ["a/"], "max_diff_lines": 200},
-    "commands": {
+HANDOFF = Handoff(
+    item="NS-001",
+    title="Walk a whole item",
+    branch="night/NS-001",
+    base_branch="main",
+    worktree=".egregore/worktrees/NS-001",
+    scope={"allow_paths": ["a/"], "max_diff_lines": 200},
+    commands={
         "setup": "uv sync",
         "test": "pytest -q",
         "full_test": "pytest -q",
     },
-    "budget": {
+    budget={
         "max_tasks": 6,
         "max_attempts_per_task": 1,
         "implementer_timeout_s": 900,
         "claude_token_ceiling": 120000,
     },
-    "implementer": {"provider": "auto", "allow_on_plan_fallback": False},
-    "babysitter": {"model": "sonnet"},
-}
+    implementer={"provider": "auto", "allow_on_plan_fallback": False},
+    babysitter={"model": "sonnet"},
+)
 
 
 def passing_sitter(**_):
@@ -257,10 +260,7 @@ class TestTokenCeiling:
     """The ceiling stops the run; it does not discard what already passed."""
 
     def test_the_ceiling_stops_the_run(self, tmp_path: Path) -> None:
-        handoff = {
-            **HANDOFF,
-            "budget": {**HANDOFF["budget"], "claude_token_ceiling": 1},
-        }
+        handoff = replace(HANDOFF, budget={**HANDOFF.budget, "claude_token_ceiling": 1})
         runner = FakeRunner(
             {"pytest -q -k T1": (1, "1 failed"), "pytest": (0, "1 passed")}
         )
@@ -280,10 +280,9 @@ class TestTokenCeiling:
         """A ceiling stops the run. It does not roll back proven work."""
         # 40 chars of diff plus a short tail costs roughly 12 tokens per
         # check, so 20 admits T1's check and refuses T2's.
-        handoff = {
-            **HANDOFF,
-            "budget": {**HANDOFF["budget"], "claude_token_ceiling": 20},
-        }
+        handoff = replace(
+            HANDOFF, budget={**HANDOFF.budget, "claude_token_ceiling": 20}
+        )
         runner = FakeRunner(
             {
                 "git diff --unified=0": (0, "x" * 40),
@@ -351,10 +350,9 @@ class TestCeilingIsHard:
     """
 
     def test_the_ceiling_is_never_exceeded(self, tmp_path: Path) -> None:
-        handoff = {
-            **HANDOFF,
-            "budget": {**HANDOFF["budget"], "claude_token_ceiling": 150},
-        }
+        handoff = replace(
+            HANDOFF, budget={**HANDOFF.budget, "claude_token_ceiling": 150}
+        )
         runner = FakeRunner(
             {
                 "git diff --unified=0": (0, "x" * 400),
@@ -395,10 +393,9 @@ class TestCeilingIsHard:
     def test_the_task_that_would_cross_the_line_is_not_committed(
         self, tmp_path: Path
     ) -> None:
-        handoff = {
-            **HANDOFF,
-            "budget": {**HANDOFF["budget"], "claude_token_ceiling": 150},
-        }
+        handoff = replace(
+            HANDOFF, budget={**HANDOFF.budget, "claude_token_ceiling": 150}
+        )
         runner = FakeRunner(
             {
                 "git diff --unified=0": (0, "x" * 400),
@@ -580,8 +577,7 @@ class TestParkLeavesACleanTree:
         assert not [c for c in runner.calls if "clean -fd" in c]
 
     def test_the_ceiling_park_also_cleans_up(self, tmp_path: Path) -> None:
-        handoff = dict(HANDOFF)
-        handoff["budget"] = {**HANDOFF["budget"], "claude_token_ceiling": 1}
+        handoff = replace(HANDOFF, budget={**HANDOFF.budget, "claude_token_ceiling": 1})
         runner = FakeRunner(dirty_script(exit_code=0))
         result = night_run.run_item(
             handoff, [mktask("T1", [])], tmp_path, runner, babysitter=passing_sitter
@@ -856,7 +852,7 @@ class TestTheRunDoesNotProceedOverASilentFailure:
         predates the feature". A reviewer cannot tell a gate that passed
         from one that was never asked to run.
         """
-        handoff = {**HANDOFF, "commands": {"setup": "uv sync", "test": "pytest -q"}}
+        handoff = replace(HANDOFF, commands={"setup": "uv sync", "test": "pytest -q"})
         runner = FakeRunner({"pytest": (1, "1 failed")})
 
         result = night_run.run_item(
@@ -914,7 +910,7 @@ class TestTheHandoffWorktreeKeyIsValidated:
 
     @staticmethod
     def _walk(tmp_path: Path, worktree: object):
-        handoff = {**HANDOFF, "worktree": worktree}
+        handoff = replace(HANDOFF, worktree=worktree)
         return night_run.run_item(
             handoff,
             [mktask("T1", [], expect="fail")],
@@ -941,7 +937,7 @@ class TestTheHandoffWorktreeKeyIsValidated:
     def test_an_ordinary_relative_worktree_is_still_used(self, tmp_path: Path) -> None:
         runner = FakeRunner({"pytest": (0, "1 passed")})
         night_run.run_item(
-            {**HANDOFF, "worktree": "trees/ns-001"},
+            replace(HANDOFF, worktree="trees/ns-001"),
             [mktask("T1", [], expect="fail")],
             tmp_path,
             runner,

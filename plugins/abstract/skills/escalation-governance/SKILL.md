@@ -100,16 +100,24 @@ When escalation IS justified:
 3. **Define success** - How will you know the escalated task succeeded?
 4. **Return promptly** - Drop back to efficient model after reasoning task
 
-## Common Rationalizations
+## Reasons That Do Not Justify Escalation
 
-| Excuse | Reality |
-|--------|---------|
-| "This is complex" | Complex for whom? Have you tried? |
-| "Better safe than sorry" | Safety theater wastes resources |
-| "I tried and failed" | How many times? Did you investigate why? |
-| "The user expects quality" | Quality comes from process, not model size |
-| "Just this once" | Exceptions become habits |
-| "Time is money" | Systematic approach is faster than thrashing |
+Escalation needs a reason tied to the task. These common ones fail
+the four steps above, and the constraint behind each says why:
+
+- "This is complex" needs the attempt that showed the current model
+  falls short. Complexity alone does not predict model failure.
+- "Better safe than sorry" names no risk. A larger model spends more
+  without reducing a risk nobody identified.
+- "I tried and failed" needs the attempt count and why it failed. A
+  failure not yet investigated is often a context problem that a
+  larger model would repeat.
+- "The user expects quality" is met by process: tests, review and
+  evidence. Model size does not supply them.
+- "Just this once" still needs the documented reason, since an
+  exception repeated without one becomes the default.
+- "Time is money" favors investigation. Thrashing on a larger model
+  is slower than a systematic pass on the current one.
 
 ## Agent Schema
 

@@ -34,11 +34,10 @@ _TEST_PATH_MARKERS = ("test_", "_test.", "/tests/", "spec.", ".spec.")
 # git diff --numstat emits added, removed, path per line.
 _NUMSTAT_FIELDS = 3
 
-# Lightweight agents that skip full governance policy
+# Lightweight agents that skip full governance policy. Plugin agents arrive
+# plugin-scoped (``pensive:code-reviewer``), so main() matches the bare name.
 LIGHTWEIGHT_AGENTS = frozenset(
     {
-        "quick-query",
-        "simple-task",
         "code-reviewer",  # Review agents don't implement features
         "architecture-reviewer",
         "rust-auditor",
@@ -222,14 +221,14 @@ def main() -> None:
         input_data = sys.stdin.read().strip()
         if input_data:
             hook_input = json.loads(input_data)
-            agent_type = hook_input.get("agent_type", "")
+            agent_type = hook_input.get("agent_type") or ""
     except (OSError, json.JSONDecodeError) as e:
         # Gracefully handle missing or malformed input
         # Log to stderr for debugging (doesn't break hook output)
         print(f"[DEBUG] Hook input parse failed: {e}", file=sys.stderr)
 
     # Skip full governance for lightweight agents
-    if agent_type in LIGHTWEIGHT_AGENTS:
+    if agent_type.rsplit(":", 1)[-1] in LIGHTWEIGHT_AGENTS:
         output = {
             "hookSpecificOutput": {
                 "hookEventName": "SessionStart",

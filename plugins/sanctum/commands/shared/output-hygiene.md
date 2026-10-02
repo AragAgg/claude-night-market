@@ -50,6 +50,20 @@ printf '%s\n' "$TEXT" | grep -nE '[“”‘’]'      && echo "fix: smart quote
 Any match is fixed in the text before posting, not just reported.
 The full prose rule set lives in `Skill(scribe:slop-detector)`.
 
+### Consequence tails (judgment, not a strip)
+
+"The index was stale, so the lookup missed" is one fact with its
+consequence appended. One is fine. Commit bodies in this repository
+reached 8.9 per 1000 words by September 2026, which is the habit.
+Before emitting, reread each `, so` and ask whether the reader needs
+the consequence stated. Delete it when they can infer it. Otherwise
+give it its own sentence or lead with the cause ("Because the index
+was stale, the lookup missed"). Aim for at most one per commit body.
+
+```bash
+printf '%s\n' "$TEXT" | tr '\n' ' ' | grep -oiE ', so [a-z]' | wc -l
+```
+
 ## Contract B: Describe the effect, never the slop or what was stripped
 
 When a commit removes AI slop, strips AI-generated content, replaces

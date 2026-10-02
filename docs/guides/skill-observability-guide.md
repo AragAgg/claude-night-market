@@ -57,6 +57,12 @@ Logs are stored in `~/.claude/skills/logs/` to persist across project sessions.
 The directory contains an aggregated `.history.json` file
 and plugin-specific subdirectories for daily `.jsonl` files.
 
+The logger rewrites `.history.json` into a temp file and renames it into
+place, so `homeostatic_monitor.py` never reads a partial file while both
+hooks run on the same event. Each update holds a lock on the sibling
+`.history.json.lock`, which parallel subagents contend for. Leave the
+lock file in place. See ADR-0027 for the race this prevents.
+
 ## Performance Analysis
 
 ### Log Inspection
@@ -77,7 +83,7 @@ accuracy variance.
 The system adds approximately 2-5ms of overhead for state writing in the
 PreToolUse hook and 10-20ms for metric calculation in the PostToolUse hook.
 Total latency remains under 25ms per tool use.
-Logs grow linearly, so implement a retention policy if a single skill exceeds
+Logs grow linearly. Implement a retention policy if a single skill exceeds
 10,000 daily executions to prevent performance degradation during log scanning.
 
 ## Verification

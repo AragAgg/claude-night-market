@@ -166,6 +166,8 @@ def frontier_verdict(session: ResearchSession, *, f_thin: int = _F_THIN) -> Verd
 
     Rules, first match wins:
 
+    0. No planned retrieval channel: ``INCONCLUSIVE``. Nothing searched
+       an index, so there is no coverage to report.
     1. Any planned retrieval channel that errored, was rate-limited, or
        has no record at all: ``INCONCLUSIVE``. The run is not evidence.
     2. Any control that failed: ``INCONCLUSIVE``. A blind channel
@@ -199,6 +201,14 @@ def frontier_verdict(session: ResearchSession, *, f_thin: int = _F_THIN) -> Verd
     outcomes = channel_outcomes(session)
     controls = canary_outcomes(session)
     probes = retrieval_channels(session)
+
+    if not probes:
+        return Verdict(
+            INCONCLUSIVE,
+            "No retrieval channel was planned, so nothing in this run "
+            "searched an index and it cannot testify about coverage.",
+            {"planned_channels": ", ".join(session.channels) or "none"},
+        )
 
     broken = [c for c in probes if outcomes.get(c, "unknown") not in _CLEAN]
     if broken:

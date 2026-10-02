@@ -142,20 +142,22 @@ def _babysitter():
 @pytest.fixture
 def walked(project: Path):
     """Walk the item once and hand back the result and the worktree."""
-    handoff = {
-        "item": "E2E-1",
-        "branch": "night/e2e-1",
-        "base_branch": "main",
-        "worktree": ".egregore/worktrees/E2E-1",
-        "scope": {"allow_paths": ["calc.py"], "max_diff_lines": 50},
-        "implementer": {"provider": "auto", "allow_on_plan_fallback": False},
-        "commands": {"full_test": f"{sys.executable} -m pytest tests -q"},
-        "budget": {
+    handoff = handoff_gate.Handoff(
+        item="E2E-1",
+        title="Fix the calculator",
+        branch="night/e2e-1",
+        base_branch="main",
+        worktree=".egregore/worktrees/E2E-1",
+        scope={"allow_paths": ["calc.py"], "max_diff_lines": 50},
+        implementer={"provider": "auto", "allow_on_plan_fallback": False},
+        commands={"full_test": f"{sys.executable} -m pytest tests -q"},
+        budget={
             "max_attempts_per_task": 1,
             "implementer_timeout_s": 120,
             "claude_token_ceiling": CEILING,
         },
-    }
+        babysitter={"model": "sonnet"},
+    )
     result = night_run.run_item(
         handoff, TASKS, project, night_run.SubprocessRunner(), babysitter=_babysitter()
     )
@@ -225,23 +227,24 @@ class TestTheEndToEndHandoffIsNotOneTheGateWouldAdmit:
     `handoff_gate._check_iron_law` requires at least one task declaring
     `evidence.expect: fail`, and both tasks here declare `pass`. The
     fixture is tuned around measured token costs (see `CEILING`) and
-    exercises the driver, which does not consult the gate at all: see
-    the wiring note in `handoff_gate`'s module docstring.
+    drives `run_item` directly, below the gate. `night_run.main` is the
+    production entry, and it consults the gate before it walks, so this
+    fixture could not enter through it.
 
-    Asserting the mismatch keeps it visible. This test turns red on the
-    commit that wires the gate into the runner, which is the commit
-    where the fixture has to become a handoff the gate admits.
+    Asserting the mismatch keeps it visible: anyone who lifts this
+    fixture into a real item directory learns from the gate, not from
+    the night.
     """
 
     def test_the_iron_law_arm_refuses_this_fixture(self) -> None:
         problems = handoff_gate._check_iron_law(TASKS)
-        assert problems, "the fixture became gate-admissible; wire it and delete this"
+        assert problems, "the fixture became gate-admissible; retire this guard"
         assert any("expect: fail" in p for p in problems)
 
-    def test_the_runner_does_not_consult_the_gate(self) -> None:
-        """The reason the mismatch is currently harmless."""
+    def test_main_consults_the_gate_before_walking(self) -> None:
+        """The production entry is gated even though this fixture is not."""
         source = Path(night_run.__file__).read_text()
-        assert "handoff_gate" not in source
+        assert "gate.check_item(" in source
 
 
 class TestTheParkedTreeIsClean:

@@ -217,3 +217,38 @@ class TestAGuardThatCouldNotRunIsNotAGuardProvenRed:
         result = self._check(0)
         assert not result.ok
         assert result.blocking
+
+
+class TestBoundariesArePinned:
+    """The cap and the override wording are exact, not approximate."""
+
+    def test_a_diff_exactly_at_the_cap_passes(self) -> None:
+        result = verdict.objective_check(
+            evidence(), exit_code=0, output="1 passed", diff_lines=200, cap=200
+        )
+        assert result.ok
+
+    def test_a_diff_one_over_the_cap_fails(self) -> None:
+        result = verdict.objective_check(
+            evidence(), exit_code=0, output="1 passed", diff_lines=201, cap=200
+        )
+        assert not result.ok
+        assert "201" in result.why
+
+    def test_a_babysitter_pass_over_red_evidence_says_it_was_overridden(
+        self,
+    ) -> None:
+        red = verdict.Objective(ok=False, why="expected a pass, exit code was 1")
+        final = verdict.reconcile("PASS", red)
+        assert final.verdict == "FAIL"
+        assert final.reason.startswith("babysitter passed it; overridden by evidence")
+        assert final.reason.endswith(red.why)
+
+    def test_a_babysitter_fail_over_red_evidence_is_not_called_an_override(
+        self,
+    ) -> None:
+        red = verdict.Objective(ok=False, why="expected a pass, exit code was 1")
+        final = verdict.reconcile("FAIL", red)
+        assert final.verdict == "FAIL"
+        assert not final.reason.startswith("babysitter passed it")
+        assert final.reason == red.why

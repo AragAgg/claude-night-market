@@ -89,44 +89,54 @@ business outcome somebody outside the code would recognize. Written
 against an internal call sequence it is the same implementation-detail
 test with three more lines of scaffolding.
 
-## Enforcement Levels
+## Five Ways to Check It Held
 
-### Level 1: Self-Enforcement (Default)
+These run from cheapest and least reliable to most mechanical. The
+later ones are machine contracts rather than advice, and the guidance
+to write intent and constraints instead of steps does not reach them:
+a pre-commit hook and a coverage gate cannot be reasoned with, which
+is the point of them. The strength budget that draws that line is in
+`Skill(abstract:skill-authoring)` module `persuasion-principles.md`.
 
-Claude recognizes Iron Law violations in its own thought process.
+### Level 1: Reading Your Own Work (Default)
 
-**Red Flags That Trigger Self-Enforcement:**
+Notice when the test was written to match code that already existed.
+The constraints below say what the RED phase protects and why:
 
-| Thought Pattern | Iron Law Violation | Required Action |
-|-----------------|-------------------|-----------------|
-| "Let me plan the implementation first" | Skipping RED phase | Write failing test FIRST |
-| "I know what tests we need" | Pre-conceived implementation | Document failure, THEN design tests |
-| "The test should check for X" | Implementation-driven test | Describe BEHAVIOR, not implementation |
-| "This will work because..." | Assumption without evidence | TEST IT, capture evidence |
-| "The design is straightforward" | Skipping uncertainty exploration | Write test, let design EMERGE |
-| "It's just documentation/config" | Documentation Exception fallacy | Markdown/YAML/shell have testable structure |
-| "It's just a module update" | Execution markdown exception | Apply content assertion levels (L1/L2/L3) per leyline:testing-quality-standards |
-| "The user wants this quickly" | Speed rationalization | Quality gates are non-negotiable |
-| "Files exist, so it works" | Existence ≠ functionality | Test BEHAVIOR, not just existence |
+- The failing test comes before the implementation plan, because a
+  plan written first decides the design the test was meant to find.
+- Tests describe behavior, not the implementation, since a test that
+  pins an internal call sequence reports failure when nothing broke.
+- "This will work because..." is a claim, so run it and capture the
+  output as evidence.
+- Documentation, config, shell and execution markdown have testable
+  structure. Apply the content assertion levels (L1/L2/L3) from
+  `leyline:testing-quality-standards` rather than exempting them.
+- Time pressure does not waive the gate: a skipped test moves the
+  cost to whoever changes the code next.
+- A file existing is not evidence that it works. Test what it does.
 
-**Self-Check Protocol:**
+**Questions Worth Asking First:**
 
-```markdown
-## Iron Law Self-Check
+These are diagnostic questions, and none of them blocks the work. A
+confident "no" to any of them is useful information about the change,
+and sometimes the honest answer is that this change does not need a
+test first. Say which and why.
 
-Before writing ANY code:
-1. [ ] Do I have documented evidence of a failure/need?
-2. [ ] Am I about to write a test that validates a pre-conceived implementation?
-3. [ ] Am I feeling uncertainty about the design? (Good - that's what tests are for)
-4. [ ] Have I let the test drive the implementation, or vice versa?
-5. [ ] Can I explain WHY this approach, not just WHAT it does?
-
-If I answered "no" to #1, #3, or #5, or "yes" to #2 or #4: STOP AND RESET.
-```
+1. Is there documented evidence of the failure or the need?
+2. Would this test validate a pre-conceived implementation rather
+   than drive one?
+3. Is there real uncertainty about the design? Uncertainty is what
+   tests are for, and its absence often means the design is already
+   decided.
+4. Did the test drive the implementation, or the reverse?
+5. Can the choice of approach be explained as well as its behavior?
 
 ### Execution Markdown = Code
 
-> **Note:** L1/L2/L3 below refer to content assertion depth per `leyline:testing-quality-standards`, distinct from this document's Enforcement Levels 1-5.
+> **Note:** L1/L2/L3 below refer to content assertion depth per
+> `leyline:testing-quality-standards`, distinct from the five check levels in
+> this document.
 
 Markdown files under `skills/`, `agents/`, `modules/`, and `commands/` directories are execution markdown. Claude interprets them as behavioral instructions. They require content assertions following the L1/L2/L3 taxonomy defined in `leyline:testing-quality-standards/modules/content-assertion-levels.md`.
 

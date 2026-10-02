@@ -135,11 +135,39 @@ class TestYamlUnavailable:
         """Reset dedup caches before each test."""
         dedup_module._index_cache = None
         dedup_module._index_mtime = 0
+        dedup_module._index_load_failed = False
+        dedup_module._warned_no_yaml = False
 
     def teardown_method(self) -> None:
         """Reset dedup caches after each test."""
         dedup_module._index_cache = None
         dedup_module._index_mtime = 0
+        dedup_module._index_load_failed = False
+        dedup_module._warned_no_yaml = False
+
+    def test_missing_yaml_warns_once_that_persistence_is_off(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: object
+    ) -> None:
+        """Without PyYAML, dedup says once per process that nothing persists.
+
+        GIVEN yaml is unavailable and an index file exists
+        WHEN the index is read and written several times
+        THEN stderr carries exactly one warning naming PyYAML
+        """
+        index_path = tmp_path / "memory-palace-index.yaml"
+        index_path.write_text("entries: {}\nhashes: {}\n")
+        monkeypatch.setattr(dedup_module, "_get_index_path", lambda: index_path)
+        monkeypatch.setattr(dedup_module, "yaml", None)
+
+        is_known(url="https://example.com")
+        update_index(content_hash="sha256:1", stored_at="a.md", importance_score=1)
+        update_index(content_hash="sha256:2", stored_at="b.md", importance_score=1)
+
+        warnings = [
+            line for line in capsys.readouterr().err.splitlines() if "PyYAML" in line
+        ]
+        assert len(warnings) == 1
+        assert "persist" in warnings[0]
 
     def test_load_index_returns_empty_when_yaml_unavailable(
         self, monkeypatch: object
@@ -172,6 +200,69 @@ class TestYamlUnavailable:
         assert (
             "yaml" in err.lower() or "corrupt" in err.lower() or "index" in err.lower()
         )
+
+    def test_corrupt_index_is_not_overwritten(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: object
+    ) -> None:
+        """An unparsable index is set aside, never saved over.
+
+        GIVEN an index holding two entries and a merge-conflict marker
+        WHEN a capture writes a new entry
+        THEN the original bytes survive in a .corrupt-<timestamp> sibling
+        AND the fresh index holds the new entry
+        AND stderr names where the original went
+        """
+        index_path = tmp_path / "memory-palace-index.yaml"
+        corrupt = (
+            "entries:\n"
+            "  https://a.example:\n"
+            "    content_hash: sha256:aaa\n"
+            "<<<<<<< HEAD\n"
+            "    stored_at: docs/a.md\n"
+            "=======\n"
+            "    stored_at: docs/a2.md\n"
+            ">>>>>>> branch\n"
+            "  https://b.example:\n"
+            "    content_hash: sha256:bbb\n"
+            "    stored_at: docs/b.md\n"
+        )
+        index_path.write_text(corrupt)
+        monkeypatch.setattr(dedup_module, "_get_index_path", lambda: index_path)
+        monkeypatch.setattr(dedup_module, "yaml", real_yaml)
+        monkeypatch.setattr(dedup_module, "_stage_index", lambda _path: None)
+
+        update_index(
+            content_hash="sha256:new",
+            stored_at="docs/new.md",
+            url="https://new.example",
+            importance_score=10,
+        )
+
+        set_aside = list(tmp_path.glob("memory-palace-index.yaml.corrupt-*"))
+        assert len(set_aside) == 1
+        assert set_aside[0].read_text() == corrupt
+        fresh = real_yaml.safe_load(index_path.read_text())
+        assert list(fresh["entries"]) == ["https://new.example"]
+        assert str(set_aside[0]) in capsys.readouterr().err
+
+    def test_reading_a_corrupt_index_leaves_it_in_place(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Only a write moves a corrupt index, so lookups have no side effect.
+
+        GIVEN an index that does not parse
+        WHEN it is only queried
+        THEN the file is untouched and no .corrupt copy exists
+        """
+        index_path = tmp_path / "memory-palace-index.yaml"
+        index_path.write_text("entries: }\n")
+        monkeypatch.setattr(dedup_module, "_get_index_path", lambda: index_path)
+        monkeypatch.setattr(dedup_module, "yaml", real_yaml)
+
+        assert not is_known(url="https://a.example")
+
+        assert index_path.read_text() == "entries: }\n"
+        assert not list(tmp_path.glob("*.corrupt-*"))
 
     def test_is_known_returns_false_when_yaml_unavailable(
         self, monkeypatch: object
@@ -239,6 +330,22 @@ class TestUpdateIndexIntegration:
         index_path = tmp_path / "memory-palace-index.yaml"
         monkeypatch.setattr(dedup_module, "_get_index_path", lambda: index_path)
         return index_path
+
+    def test_write_records_the_mtime_it_cached(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        """The cache stamp matches the file just written.
+
+        GIVEN an isolated index
+        WHEN update_index writes it
+        THEN the module-level _index_mtime equals the file's mtime
+        """
+        index_path = self._isolate_index(monkeypatch, tmp_path)
+        monkeypatch.setattr(dedup_module, "_stage_index", lambda _path: None)
+
+        update_index(content_hash="sha256:m", stored_at="m.md", importance_score=1)
+
+        assert dedup_module._index_mtime == index_path.stat().st_mtime
 
     def test_url_entry_round_trip_marks_known(
         self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path

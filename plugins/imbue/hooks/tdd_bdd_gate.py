@@ -237,8 +237,8 @@ def main() -> None:
             output = {
                 "hookSpecificOutput": {
                     "hookEventName": "PreToolUse",
-                    "decision": "defer",
-                    "reason": (
+                    "permissionDecision": "defer",
+                    "permissionDecisionReason": (
                         f"New {impl_type} '{Path(file_path).name}' has no tests. "
                         f"Expected: {test_path}. "
                         "Resume with --resume to write tests first or approve."

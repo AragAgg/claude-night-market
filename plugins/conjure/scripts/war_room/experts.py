@@ -11,7 +11,6 @@ from __future__ import annotations
 import asyncio
 import shutil
 import subprocess  # nosec B404 - Used safely with create_subprocess_exec (no shell)
-from collections.abc import Callable
 from pathlib import Path
 
 from scripts.war_room.config import (
@@ -40,7 +39,6 @@ EXPERT_CONFIGS: dict[str, ExpertConfig] = {
         model=CLAUDE_OPUS,
         description="Final decision authority and synthesis",
         phases=["synthesis"],
-        dangerous=False,
     ),
     "chief_strategist": ExpertConfig(
         role="Chief Strategist",
@@ -48,7 +46,6 @@ EXPERT_CONFIGS: dict[str, ExpertConfig] = {
         model=CLAUDE_SONNET,
         description="Approach generation and trade-off analysis",
         phases=["assessment", "coa"],
-        dangerous=False,
     ),
     "intelligence_officer": ExpertConfig(
         role="Intelligence Officer",
@@ -64,10 +61,6 @@ EXPERT_CONFIGS: dict[str, ExpertConfig] = {
         model=GLM_53,
         description="Implementation feasibility assessment",
         phases=["coa"],
-        command_resolver="get_glm_command",
-        # Asked for an opinion through -p and uses no tools, so it needs
-        # no permission bypass. See get_glm_command.
-        dangerous=False,
     ),
     "scout": ExpertConfig(
         role="Scout",
@@ -170,15 +163,6 @@ _haiku_fallback_notices: list[str] = []
 # Command Resolution
 # ---------------------------------------------------------------------------
 
-# Registry of command resolvers (used by get_expert_command). Typed as the
-# callable it actually holds: every registered resolver is a zero-argument
-# function returning the argv list. Declaring it as object made the resolver
-# call below unverifiable, which is the whole reason the registry exists.
-#: Resolvers take keyword arguments only, so a new one can be added
-#: without every existing resolver changing shape. `skip_permissions`
-#: is the first, carried from `ExpertConfig.dangerous`.
-_COMMAND_RESOLVERS: dict[str, Callable[..., list[str]]] = {}
-
 
 def get_haiku_command() -> list[str]:
     """Get command to invoke Claude Haiku as fallback.
@@ -218,13 +202,24 @@ async def check_expert_availability(expert: ExpertConfig) -> bool:
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
         )
-        await asyncio.wait_for(proc.communicate(), timeout=10.0)
+        try:
+            await asyncio.wait_for(proc.communicate(), timeout=10.0)
+        except asyncio.TimeoutError:
+            # wait_for cancels communicate(), not the process. Without
+            # this the provider CLI outlives the probe, holding its pipes
+            # for the rest of the session.
+            proc.kill()
+            await proc.wait()
+            raise
 
         available = proc.returncode == 0
         _expert_availability[cache_key] = available
         return available
 
-    except (TimeoutError, FileNotFoundError, RuntimeError):
+    # asyncio.TimeoutError became an alias of the builtin only in 3.11;
+    # this plugin runs on 3.9, where catching TimeoutError alone lets the
+    # probe timeout escape and take the whole panel down.
+    except (asyncio.TimeoutError, TimeoutError, FileNotFoundError, RuntimeError):
         _expert_availability[cache_key] = False
         return False
 
@@ -248,13 +243,10 @@ def get_glm_command(*, skip_permissions: bool = False) -> list[str]:
 
     The model id comes from the ExpertConfig, not from here.
 
-    ``--dangerously-skip-permissions`` was passed unconditionally at two
-    of the three call sites below, and the error message recommended
-    making it permanent as a shell alias. A war-room expert is asked for
-    an opinion through ``-p`` and uses no tools, so there is nothing for
-    it to need a permission bypass for. It is opt-in now, carried by the
-    ``dangerous`` field on ExpertConfig, which existed for this and was
-    read nowhere.
+    ``--dangerously-skip-permissions`` is added only when a caller passes
+    ``skip_permissions=True``. The war-room GLM expert does not: it is
+    asked for an opinion through ``-p`` and uses no tools, so it has no
+    permission to bypass.
 
     Priority:
     1. ccgd (alias) - if available in PATH
@@ -279,32 +271,19 @@ def get_glm_command(*, skip_permissions: bool = False) -> list[str]:
     )
 
 
-# Register resolvers
-_COMMAND_RESOLVERS["get_glm_command"] = get_glm_command
-
-
 def get_expert_command(expert: ExpertConfig) -> list[str]:
     """Get the command to invoke an expert.
 
-    A resolver-built command carries ``expert.model`` explicitly. It did
-    not, and the sealed audit record attributes the answer to that id
-    through ``expert_model`` and the metadata hash, so editing the id
-    rewrote the provenance and left the call untouched. The two must
-    move together or the record is a claim about a run that did not
-    happen.
+    The GLM command carries ``expert.model`` explicitly. The sealed audit
+    record attributes the answer to that id through ``expert_model`` and
+    the metadata hash, so the call must name the same model the record
+    does.
 
     Statically configured experts already name the model in ``command``
     and are returned unchanged.
     """
-    if expert.command_resolver:
-        resolver = _COMMAND_RESOLVERS.get(expert.command_resolver)
-        if resolver is None:
-            raise RuntimeError(f"Unknown command resolver: {expert.command_resolver}")
-        cmd = resolver(skip_permissions=expert.dangerous)
-        if not isinstance(cmd, list):
-            raise RuntimeError(
-                f"Resolver {expert.command_resolver} did not return list"
-            )
+    if expert.service == "glm":
+        cmd = get_glm_command(skip_permissions=False)
         if expert.model and "--model" not in cmd:
             # Before the trailing -p, which claude reads as "print this".
             insert_at = cmd.index("-p") if "-p" in cmd else len(cmd)

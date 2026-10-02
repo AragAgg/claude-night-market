@@ -1,6 +1,6 @@
 {
   "name": "sanctum",
-  "version": "1.9.20",
+  "version": "1.9.21",
   "description": "Git and workspace operations for active development workflows - commit messages, PR prep, documentation updates, and version management",
   "commands": [
     "./commands/acp.md",
@@ -34,7 +34,6 @@
     "./skills/stack-rebase",
     "./skills/doc-consolidation",
     "./skills/doc-updates",
-    "./skills/file-analysis",
     "./skills/git-workspace-review",
     "./skills/pr-prep",
     "./skills/pr-review",

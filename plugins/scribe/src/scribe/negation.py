@@ -23,11 +23,13 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 
+from .markdown_spans import FENCED_CODE, INLINE_CODE
+
 DEFAULT_THRESHOLD = 0.35
 DEFAULT_MIN_SENTENCES = 8
 
-_FENCED_CODE = re.compile(r"^```.*?^```", re.DOTALL | re.MULTILINE)
-_INLINE_CODE = re.compile(r"`[^`\n]*`")
+_FENCED_CODE = FENCED_CODE
+_INLINE_CODE = INLINE_CODE
 _SENTENCE_SPLIT = re.compile(r"(?<=[.!?])\s+")
 
 # Markers that put a sentence in the negative. Contractions are matched

@@ -13,7 +13,6 @@ tags:
 dependencies:
 - superpowers:test-driven-development
 - git-workspace-review
-- file-analysis
 tools: []
 usage_patterns:
 - test-maintenance
@@ -27,6 +26,7 @@ modules:
 - modules/bdd-patterns.md
 - modules/content-test-discovery.md
 - modules/quality-validation.md
+- modules/structure-mapping.md
 - modules/tdd-workflow.md
 - modules/test-discovery.md
 - modules/test-enhancement.md
@@ -307,7 +307,8 @@ See `modules/test-enhancement.md` for enhancement strategies.
 ## Integration with Existing Skills
 
 1. **git-workspace-review**: Get context of changes
-2. **file-analysis**: Understand code structure
+2. **structure mapping**: Map layout, languages and large files
+   with `modules/structure-mapping.md`
 3. **test-driven-development**: Apply strict TDD discipline
 4. **skills-eval**: Validate quality and compliance
 

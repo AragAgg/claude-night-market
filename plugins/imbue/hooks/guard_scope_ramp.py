@@ -45,6 +45,7 @@ from shared.vow_utils import (  # noqa: E402 - same path-injection pattern as si
     secure_open,
     secure_state_dir,
     shadow_mode_active,
+    vow_output,
 )
 
 _CODE_TOOLS = frozenset({"Write", "Edit", "MultiEdit"})
@@ -206,13 +207,7 @@ def main() -> None:
                 "over-rung increments.)"
             )
 
-        output = {
-            "hookSpecificOutput": {
-                "hookEventName": "PreToolUse",
-                "permissionDecision": decision,
-                "permissionDecisionReason": reason,
-            }
-        }
+        output = vow_output(enforce=decision == "block", reason=reason)
         print(json.dumps(output))
         print(
             f"[guard-scope-ramp] {decision.upper()}: {added} lines "

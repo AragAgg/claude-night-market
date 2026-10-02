@@ -44,8 +44,17 @@ MIN_WORD_COUNT = 10
 # A table pairing a thought with why it is wrong. `.claude/rules/bounded-
 # autonomy.md` retires the shape: it forecloses the case where the thought
 # was right, which is the only case that matters. Nothing scored it, so
-# bounded-discovery.md kept one for months and four skills copied it.
-RATIONALIZATION_TABLE_RE = re.compile(r"^\|\s*Thought\b[^|]*\|", re.MULTILINE)
+# bounded-discovery.md kept one for months and four skills copied it, under
+# `Excuse` headers as well as `Thought` ones.
+RATIONALIZATION_TABLE_RE = re.compile(
+    r"^\|\s*(?:Thought|Excuse|Rationali[sz]ation)s?\b[^|]*\|",
+    re.MULTILINE | re.IGNORECASE,
+)
+RATIONALIZATION_WARNING = (
+    "Rationalization table (a thought paired with why it is wrong) is a "
+    "retired pattern per .claude/rules/bounded-autonomy.md. State the "
+    "constraint and what is behind it instead."
+)
 MAX_TOKEN_COUNT = 500
 HIGH_TOKEN_COUNT = 1000
 
@@ -274,11 +283,7 @@ def validate_content_quality(content: str) -> dict[str, Any]:
         score -= 5
 
     if RATIONALIZATION_TABLE_RE.search(content):
-        warnings.append(
-            "Rationalization table (a thought paired with why it is wrong) is a "
-            "retired pattern per .claude/rules/bounded-autonomy.md. State the "
-            "constraint and what is behind it instead."
-        )
+        warnings.append(RATIONALIZATION_WARNING)
         score -= 5
 
     # Verbose content
@@ -290,6 +295,20 @@ def validate_content_quality(content: str) -> dict[str, Any]:
         score -= 5
 
     return {"score": max(0, score), "warnings": warnings, "token_count": token_count}
+
+
+def check_retired_patterns(md_file: Path) -> list[str]:
+    """Report retired-pattern hits in one markdown file, such as a SKILL.md.
+
+    Skills are not rules, so the directory scoring does not apply to them,
+    but they copied the retired table and need the same check.
+    """
+    content = md_file.read_text(encoding="utf-8")
+    return [
+        f"{md_file}:{content.count(chr(10), 0, match.start()) + 1}: "
+        f"{RATIONALIZATION_WARNING}"
+        for match in RATIONALIZATION_TABLE_RE.finditer(content)
+    ]
 
 
 def evaluate_rules_directory(rules_dir: Path) -> dict[str, Any]:  # noqa: PLR0915 - evaluation collects many metrics in a single pass
@@ -411,12 +430,22 @@ if __name__ == "__main__":
         "rules_dir",
         nargs="?",
         default=".claude/rules",
-        help="Path to rules directory (default: .claude/rules)",
+        help=(
+            "Rules directory (default: .claude/rules), or one markdown file "
+            "such as a SKILL.md to check for retired patterns only"
+        ),
     )
     parser.add_argument("--detailed", action="store_true", help="Show detailed output")
     args = parser.parse_args()
 
-    result = evaluate_rules_directory(Path(args.rules_dir))
+    target = Path(args.rules_dir)
+    if target.is_file():
+        findings = check_retired_patterns(target)
+        for finding in findings:
+            print(f"  [WARN] {finding}")
+        raise SystemExit(1 if findings else 0)
+
+    result = evaluate_rules_directory(target)
 
     print("=== Rules Evaluation Report ===")
     print(f"Directory: {args.rules_dir}")

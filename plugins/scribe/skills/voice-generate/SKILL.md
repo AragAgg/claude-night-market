@@ -134,6 +134,8 @@ Follow them as concrete instructions, not suggestions.
 
 {banned_phrases content, or default list:}
 - Em dashes (use commas, colons, semicolons, parentheses)
+- ", so" tails on fact after fact (cut the consequence, or give it
+  its own sentence)
 - "delve", "utilize", "leverage", "facilitate"
 - "it's important to note", "in today's world"
 - "here's the thing", "let that sink in"

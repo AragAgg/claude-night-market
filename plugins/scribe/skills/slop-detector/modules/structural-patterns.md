@@ -495,6 +495,14 @@ needed.
 Runtime source: `data/languages/en.yaml` § `tier5.contrastive_scaffold`,
 `default_enabled: false`, `confidence: low`.
 
+The negated form is scored. `tier5.negated_alternative` (high
+confidence) matches a negation followed in the same clause by
+"instead of" or "rather than": "never guesses instead of measuring",
+"does not retry rather than report the failure". Rewrite by stating
+what the thing does. A recommendation with no negation ("use rg
+rather than grep") does not match, and a sentence boundary between
+the negation and the connective breaks the match.
+
 ## Negative Framing (Litotes, Vacuous Negation, Negative Definition)
 
 Negative parallelism above is a scaffold: *not X, but Y*. This is a
@@ -752,7 +760,12 @@ coordinating conjunction reads more naturally. The clause after
 the semicolon could stand alone as its own sentence, and almost
 always reads better that way. Use a semicolon in prose only
 when it is absolutely necessary: a list whose items already
-carry internal commas is the one durable case.
+carry internal commas is the one durable case. The runtime
+pattern (`tier5.semicolon_splice`, high confidence since
+2026-09-18) matches only the splice: no comma on either side of
+the semicolon and a lowercase continuation to a sentence end, so
+the list case is not reported at all, and a reference such as
+"; See Table 2" is left alone.
 
 Examples:
 
@@ -767,8 +780,9 @@ Examples:
 Rephrase, in order of preference:
 
 1. Split into two sentences (period). Default choice.
-2. Join with a coordinating conjunction ("and", "but", "so")
-   when the clauses are tightly linked.
+2. Join with "and" or "but" when the clauses are tightly
+   linked. Do not trade the semicolon for a ", so" tail (next
+   section).
 3. Keep the semicolon only when removing it creates ambiguity
    (a list with internal commas).
 
@@ -784,6 +798,66 @@ awk '/^```/{c=!c}!c' file.md \
   | sed -E 's/`[^`]*`//g; s#https?://[^ ]*##g' \
   | grep -oP '\w;\s+\w' | wc -l
 ```
+
+## Consequence Tail (", so")
+
+"The index was stale, so the lookup missed." A clause states a
+fact, then a comma and "so" append what followed from it. One of
+these is ordinary English. The tell is the habit: every fact
+arrives with its consequence attached, and the reader is walked
+through inferences they would have made unaided.
+
+Measured over this repository's commit bodies, the rate went from
+none per 1000 words in January 2026 to 0.55 in May, 6.2 in August
+and 8.9 in September. `book/src` holds 0.18. Four guidance files
+offered "so" as the fix for a semicolon splice from 2026-06-11
+onward. The dates line up with the rise and prove nothing more.
+
+The common shapes, by frequency in this repository:
+
+- ", so the ...", ", so a ...", ", so it ..." (about 70% of hits)
+- ", so every ...", ", so no ...", ", so nothing ..."
+- ", so that ..." used as a result clause
+
+Rewrite in this order, and stop at the first that works:
+
+1. **Delete the consequence.** Ask whether the reader needs it
+   stated. "The flag is off by default, so CI never sees it"
+   usually becomes "The flag is off by default." when the
+   paragraph is about CI. This is the step no regex can take,
+   and the one most tails fail.
+2. **Give it its own sentence.** "The index was stale. The
+   lookup missed." Two short facts read as evidence. The comma
+   splice reads as narration.
+3. **Lead with the cause.** "Because the index was stale, the
+   lookup missed." The subordinate clause states the dependency
+   once, at the front, where a reader weighs it.
+4. **Name the mechanism.** "The lookup reads the index, and the
+   index was stale." The link is stated as a fact about the
+   system rather than as the writer's inference.
+
+Keep a ", so" when the consequence is the point of the sentence
+and none of the four reads better. Density is what matters. Two in
+a 1000-word page is normal. One per paragraph is the habit.
+
+"So that" stating a purpose ("move the check so that the hook
+fails closed") takes no comma and is not matched. "So far", "so
+much", "so many", "so long as", "so to speak" and "so-called" are
+excluded.
+
+Detection:
+
+- `tier5.so_connective` marks each tail at medium confidence. It
+  is surfaced and never scored.
+- `scribe.connectives.check_so_density` reports a page above 2.0
+  per 1000 words, with a 500-word floor. `slop_score.py --audit`
+  prints it as `so density` beside negation density. Advisory,
+  never a merge gate.
+
+Related: `tier5.over_explanation` in `en.yaml` (opt-in) catches
+"this ensures that" and "which allows us to", the same narration
+with a different connective. Document economy's sentence-weight check
+(`document-economy.md`) is the judgment half of step 1.
 
 ## Sentence Length Clustering (Refined)
 

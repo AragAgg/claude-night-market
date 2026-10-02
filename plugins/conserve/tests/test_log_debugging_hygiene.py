@@ -21,7 +21,7 @@ from pathlib import Path
 import pytest
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
-SKILL_DIR = REPO_ROOT / "plugins" / "conserve" / "skills" / "compression-strategy"
+SKILL_DIR = REPO_ROOT / "plugins" / "conserve" / "skills" / "context-optimization"
 MODULE_FILE = SKILL_DIR / "modules" / "log-debugging-hygiene.md"
 PARENT_SKILL = SKILL_DIR / "SKILL.md"
 # Deterministic synthetic fixture committed under this test directory
@@ -193,7 +193,7 @@ def test_conserve_does_not_bundle_runtime_compressor() -> None:
     assert not found, (
         f"conserve runtime deps must not include a log compressor; "
         f"found {found}. See "
-        f"plugins/conserve/skills/compression-strategy/modules/"
+        f"plugins/conserve/skills/context-optimization/modules/"
         f"log-debugging-hygiene.md for the doctrine and "
         f".claude/rules/shared-utility-consumer-rule.md for the "
         f"consumer-count requirement."

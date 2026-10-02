@@ -22,7 +22,6 @@ It integrates with sanctum's documentation workflows.
 | `slop-detector` | Detect AI-generated content markers | Scanning docs for AI tells |
 | `style-learner` | Extract writing style from exemplar text | Creating style profiles |
 | `doc-generator` | Generate/remediate documentation | Writing or fixing docs |
-| `doc-importer` | Import external documents (PDF, DOCX, PPTX) to markdown | Converting non-markdown files for editing |
 | `tech-tutorial` | Plan, draft, and refine technical tutorials | Writing step-by-step developer guides |
 | `session-to-post` | Convert sessions into blog posts or case studies | Sharing session outcomes |
 | `session-replay` | Convert session JSONL into GIF/MP4/WebM replays | Creating animated session recordings |

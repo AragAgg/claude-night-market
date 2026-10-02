@@ -23,14 +23,21 @@ description: |
   [ENFORCEMENT if applicable]
 ```
 
-## Enforcement Language Tiers
+## Enforcement Language Strength
 
-| Level | Category | Language | Example |
-|-------|----------|----------|---------|
-| 1 | Discipline (TDD, security) | Maximum | "YOU MUST. NON-NEGOTIABLE." |
-| 2 | Workflow (planning, review) | High | "Use BEFORE starting." |
-| 3 | Technique (patterns) | Medium | "Use when encountering [X]." |
-| 4 | Reference (docs) | Low | "Available for [X]." |
+Imperative wording is budgeted by what breaks when the instruction is
+wrong. Skill category does not set it.
+`Skill(abstract:skill-authoring)` module `persuasion-principles.md`
+defines three strengths:
+
+| Strength | For | Example |
+|----------|-----|---------|
+| Invariant | Trust boundaries, credentials, destructive commands, machine contracts | "Never log the token: it grants write access." |
+| Default | This repository's pick among defensible options | "Use `rg`, or `grep` when `rg` is absent." |
+| Map | Local facts the model cannot derive | "Use when encountering [X]." |
+
+An invariant states its reason. Pressure phrasing such as "YOU MUST"
+adds no information a reason does not carry better.
 
 ## Edge Cases & Exceptions
 
@@ -48,17 +55,30 @@ For skills with `progressive_loading: true`, core content loads by default while
 
 ## Migration Guide for External Authors
 
-To migrate existing skills to the framework, first audit the current description for any conditional logic in the body and move it to the YAML frontmatter. Rewrite the description using the standard template, focusing on active verbs and concrete triggers. Delete any "When to Use" sections from the skill body to avoid duplication. Then, calibrate the enforcement language intensity based on the skill category, ranging from "YOU MUST" for discipline-related skills to "Available for" for reference materials. Every skill must also include negative triggers with explicit exclusions and alternatives. Finally, run the `skills-eval` tool to verify compliance.
+To migrate existing skills to the framework, first audit the current description
+for any conditional logic in the body and move it to the YAML frontmatter.
+Rewrite the description using the standard template, focusing on active verbs
+and concrete triggers. Delete any "When to Use" sections from the skill body to
+avoid duplication. Then, reserve imperative wording for invariants and give each
+one its reason. Every skill must also include negative triggers with explicit
+exclusions and alternatives. Finally, run the `skills-eval` tool to verify
+compliance.
 
 ## Compliance Criteria
 
-The framework evaluates compliance based on five weighted criteria. Trigger isolation, which accounts for 15% of the score, requires all conditional logic to be in the description. Enforcement language and negative triggers are each weighted at 10%, ensuring appropriate intensity and explicit routing. Keyword optimization also contributes 10% through the use of concrete triggers, while anti-rationalization patterns contribute 5% by referencing established enforcement modules.
+The framework evaluates compliance based on five weighted criteria. Trigger
+isolation, which accounts for 15% of the score, requires all conditional logic
+to be in the description. Enforcement language and negative triggers are each
+weighted at 10%: imperatives appear only on invariants with their reasons, and
+routing to alternatives is explicit. Keyword optimization also contributes 10%
+through the use of concrete triggers, and exit criteria contribute 5% when each
+one can be checked from outside the conversation.
 
 ## Shared Modules
 
 Located in `plugins/abstract/shared-modules/`:
 
-- `skill-selection-judgment.md`: Red flags table for common excuses
+- `skill-selection-judgment.md`: How a session judges whether a skill applies
 - `trigger-patterns.md`: Description field templates
 
-Reference these in skills that need enforcement patterns.
+Reference these from skills that route or select other skills.

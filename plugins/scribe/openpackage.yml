@@ -1,5 +1,5 @@
 name: scribe
-version: 1.9.20
+version: 1.9.21
 description: Documentation review, generation, SICO voice extraction, and human-quality writing with AI slop detection and
   adaptive voice profiling
 keywords:
@@ -32,7 +32,6 @@ skills:
 - skills/doc-generator
 - skills/tech-tutorial
 - skills/session-to-post
-- skills/doc-importer
 - skills/session-replay
 - skills/voice-extract
 - skills/voice-generate

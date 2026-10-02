@@ -178,18 +178,21 @@ class TestIronLawEnforcementModule:
 
     @pytest.mark.bdd
     @pytest.mark.unit
-    def test_module_includes_red_flags_table(self, module_content: str) -> None:
-        """Scenario: Iron Law module includes red flags for TDD violations.
+    def test_module_states_red_phase_constraints_with_reasons(
+        self, module_content: str
+    ) -> None:
+        """Scenario: Iron Law module states each RED-phase constraint and its reason.
 
         Given the iron-law-enforcement module
         When reading the module content
-        Then it should include red flags table
-        For detecting TDD violations.
+        Then it states that the test precedes the plan, and why
+        And it carries no thought-versus-reality table.
         """
-        # Assert - red flags are documented
-        assert "Red Flag" in module_content or "red flag" in module_content.lower()
-        assert "plan the implementation" in module_content.lower()
-        assert "pre-conceived" in module_content.lower()
+        flat = " ".join(module_content.split()).lower()
+        assert "failing test comes before the implementation plan" in flat
+        assert "decides the design the test was meant to find" in flat
+        assert "pre-conceived" in flat
+        assert "| thought pattern |" not in flat
 
     @pytest.mark.bdd
     @pytest.mark.unit

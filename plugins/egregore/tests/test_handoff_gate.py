@@ -17,6 +17,7 @@ from pathlib import Path
 
 import handoff_gate as gate
 import pytest
+import yaml
 
 GOOD_REQUIREMENTS = """\
 ---
@@ -653,3 +654,352 @@ class TestTraceabilityRejectsATaskThatDoesNotExist:
 
     def test_a_criterion_traced_to_a_real_task_passes(self) -> None:
         assert gate._check_traceability(self.CRITERIA, {"AC1": ["T1"]}, {"T1"}) == []
+
+
+class TestLoadItem:
+    """The runner reads the documents through the same loader the gate uses."""
+
+    def test_an_admitted_item_yields_its_handoff_and_tasks(
+        self, tmp_path: Path
+    ) -> None:
+        handoff, tasks = gate.load_item(write_item(tmp_path))
+        assert isinstance(handoff, gate.Handoff)
+        assert handoff.item == "NS-001"
+        assert handoff.branch == "night/NS-001-provider-timeout"
+        assert handoff.budget["max_attempts_per_task"] == 3
+        assert [task["id"] for task in tasks] == ["T1", "T2"]
+
+    def test_a_refused_item_raises(self, tmp_path: Path) -> None:
+        with pytest.raises(ValueError, match="absent"):
+            gate.load_item(write_item(tmp_path, **{"design.md": None}))
+
+
+def _handoff_doc(**changes: object) -> str:
+    """GOOD_HANDOFF with keys replaced, or removed where the value is ``_DROP``."""
+    data = yaml.safe_load(GOOD_HANDOFF.split("---")[1])
+    for key, value in changes.items():
+        if value is _DROP:
+            del data[key]
+        else:
+            data[key] = value
+    return "---\n" + yaml.safe_dump(data, sort_keys=False) + "---\n\nbody\n"
+
+
+_DROP = object()
+
+
+class TestTheHandoffIsTyped:
+    """Feature: the runner reads a parsed Handoff, never a raw mapping.
+
+    Read through ``.get(...) or {}``, a handoff missing its branch reached
+    ``git worktree add -b None``. A missing or mistyped key now stops at
+    the loader, which names it.
+    """
+
+    @pytest.mark.parametrize("key", gate.HANDOFF_REQUIRED_KEYS)
+    def test_a_missing_required_key_is_named(self, tmp_path: Path, key: str) -> None:
+        item = write_item(tmp_path, **{"handoff.md": _handoff_doc(**{key: _DROP})})
+
+        with pytest.raises(ValueError, match=repr(key)):
+            gate.load_item(item)
+
+    @pytest.mark.parametrize(
+        ("key", "value"),
+        [("branch", 123), ("base_branch", None), ("scope", "a/"), ("budget", [])],
+    )
+    def test_a_mistyped_key_is_named(
+        self, tmp_path: Path, key: str, value: object
+    ) -> None:
+        item = write_item(tmp_path, **{"handoff.md": _handoff_doc(**{key: value})})
+
+        with pytest.raises(ValueError, match=repr(key)):
+            gate.load_item(item)
+
+    def test_the_gate_refuses_a_mistyped_key(self, tmp_path: Path) -> None:
+        """Refused as MALFORMED, so ``main`` never reaches ``load_item`` with it."""
+        item = write_item(tmp_path, **{"handoff.md": _handoff_doc(branch=123)})
+
+        result = gate.check_item(item)
+
+        assert result.code == gate.MALFORMED
+        assert any("'branch'" in problem for problem in result.problems)
+
+    def test_the_gate_requires_exactly_the_handoff_fields(self) -> None:
+        required = tuple(
+            f.name
+            for f in dataclasses.fields(gate.Handoff)
+            if f.default is dataclasses.MISSING
+        )
+
+        assert gate.REQUIRED_DOCS["handoff.md"][1] == required
+
+    def test_the_handoff_cannot_be_reassigned(self, tmp_path: Path) -> None:
+        handoff, _ = gate.load_item(write_item(tmp_path))
+
+        with pytest.raises(dataclasses.FrozenInstanceError):
+            handoff.branch = "other"  # type: ignore[misc]  # frozen dataclass: the write must raise
+
+
+class TestForbiddenCommandsAreReadAsArgv:
+    """A bypass is judged by what the command does, not how it is spelled.
+
+    Substring matching on normalized text let reordered flags, split
+    short options, git global options and `+refspec` pushes through,
+    and night_run executes whatever the gate admits with nobody watching.
+    """
+
+    @pytest.mark.parametrize(
+        "command",
+        [
+            # The bypasses the substring match admitted.
+            "git push origin main --force",
+            "git -C . reset --hard HEAD",
+            "rm -fr build",
+            "rm -r -f build",
+            "git commit -a -n -m x",
+            "git push origin +main",
+            # Further spellings of the same operations.
+            "git push -uf origin main",
+            "git push --force-with-lease origin main",
+            "git push --force-with-lease=main origin main",
+            "git push --forc origin main",
+            "git -c user.name=x push -f",
+            "git --git-dir=.git --work-tree=. push --force",
+            "git push origin +refs/heads/a:refs/heads/b",
+            "git commit -an -m x",
+            "git commit -anm x",
+            "git commit --no-verif -m x",
+            "git reset --har HEAD",
+            "rm -Rf build",
+            "rm --recursive --force build",
+            "uv run rm -rf build",
+            "env SKIP=ruff git commit -m x",
+            "git -c core.hooksPath=/dev/null commit -m x",
+            "git -c alias.p=push p --force",
+            # The refusals that already held.
+            "git commit --no-verify",
+            "git push --force origin main",
+            "rm -rf build",
+            "SKIP=ruff git commit -m x",
+            "git commit -n -m x",
+            "git  reset  --hard",
+            "git push  -f",
+            "pre-commit run --no-verify",
+        ],
+    )
+    def test_a_bypass_is_refused(self, tmp_path: Path, command: str) -> None:
+        handoff = GOOD_HANDOFF.replace(
+            "test: uv run pytest tests/ -q", f"test: {command}"
+        )
+        result = gate.check_item(write_item(tmp_path, **{"handoff.md": handoff}))
+        assert result.state == "UNSAFE", command
+        assert any("bypasses a quality gate" in p for p in result.problems)
+
+    @pytest.mark.parametrize(
+        "command",
+        [
+            "git push origin main",
+            "git push -u origin main",
+            "rm build.log",
+            "rm -f build.log",
+            "rm -r build",
+            'git commit -m "fix -n handling"',
+            "git commit -m fix-no-verify-docs",
+            "git commit -mn",
+            "git -C plugins/egregore status",
+            "git reset --soft HEAD~1",
+            "uv run pytest tests/ -q -k force",
+        ],
+    )
+    def test_an_ordinary_command_is_admitted(
+        self, tmp_path: Path, command: str
+    ) -> None:
+        handoff = GOOD_HANDOFF.replace(
+            "test: uv run pytest tests/ -q", f"test: {command}"
+        )
+        result = gate.check_item(write_item(tmp_path, **{"handoff.md": handoff}))
+        assert result.state == "READY", (command, result.problems)
+
+    def test_unbalanced_quotes_are_refused(self, tmp_path: Path) -> None:
+        handoff = GOOD_HANDOFF.replace(
+            "test: uv run pytest tests/ -q", "test: git push 'origin main --force"
+        )
+        result = gate.check_item(write_item(tmp_path, **{"handoff.md": handoff}))
+        assert result.state == "UNSAFE"
+        assert any("parseable" in p for p in result.problems)
+
+    def test_a_chained_bypass_is_refused_for_both_reasons(self, tmp_path: Path) -> None:
+        handoff = GOOD_HANDOFF.replace(
+            "test: uv run pytest tests/ -q",
+            "test: pytest -q && git push origin +main",
+        )
+        result = gate.check_item(write_item(tmp_path, **{"handoff.md": handoff}))
+        assert result.state == "UNSAFE"
+        assert any("bypasses a quality gate" in p for p in result.problems)
+        assert any("shell metacharacters" in p for p in result.problems)
+
+
+class TestDocumentShapesAreCheckedAtLoad:
+    """A key of the wrong type is MALFORMED, never an exception.
+
+    Key presence alone admitted `acceptance: []` as READY, and a scalar
+    where a list belongs raised AttributeError out of check_item, which
+    night_run calls before it walks anything.
+    """
+
+    @pytest.mark.parametrize(
+        ("doc", "new", "key"),
+        [
+            ("requirements.md", "acceptance: AC1", "acceptance"),
+            ("requirements.md", "acceptance: []", "acceptance"),
+            ("requirements.md", "acceptance: [AC1]", "acceptance"),
+            ("tasks.md", "tasks: T1", "tasks"),
+            ("tasks.md", "tasks: []", "tasks"),
+            ("tasks.md", "tasks: [T1]", "tasks"),
+            ("design.md", "traces: AC1", "traces"),
+            ("design.md", "traces:\n  AC1: T1", "traces"),
+        ],
+    )
+    def test_a_wrong_shape_is_malformed_and_named(
+        self, tmp_path: Path, doc: str, new: str, key: str
+    ) -> None:
+        good = {
+            "requirements.md": GOOD_REQUIREMENTS,
+            "tasks.md": GOOD_TASKS,
+            "design.md": GOOD_DESIGN,
+        }[doc]
+        body = good.split(f"\n{key}:")[0] + f"\n{new}\n---\n"
+        result = gate.check_item(write_item(tmp_path, **{doc: body}))
+        assert result.state == "MALFORMED", result.problems
+        assert any(repr(key) in p for p in result.problems), result.problems
+
+    def test_a_task_whose_evidence_is_not_a_mapping_is_malformed(
+        self, tmp_path: Path
+    ) -> None:
+        tasks = GOOD_TASKS.replace(
+            "    evidence:\n"
+            "      command: uv run pytest tests/test_delegation_error_paths.py -q\n"
+            "      expect: pass\n"
+            '      match: "1 passed"\n',
+            "    evidence: uv run pytest -q\n",
+        )
+        result = gate.check_item(write_item(tmp_path, **{"tasks.md": tasks}))
+        assert result.state == "MALFORMED", result.problems
+        assert any("evidence" in p for p in result.problems)
+
+
+class TestExpectFailRequiresMatch:
+    """A red check must name the failure it expects.
+
+    pytest exits 4 on a usage error (a typo in the path) and 5 when it
+    collects no tests. Both are nonzero, so `expect: fail` alone counts
+    a check that never ran as the guard going red. `evidence.match` is
+    what ties the red to the failure the task meant.
+    """
+
+    def test_expect_fail_without_match_is_refused_naming_the_task(
+        self, tmp_path: Path
+    ) -> None:
+        tasks = GOOD_TASKS.replace('      match: "1 failed"\n', "")
+        result = gate.check_item(write_item(tmp_path, **{"tasks.md": tasks}))
+        assert result.state == "INCOHERENT", result.problems
+        assert any("task T1" in p and "match" in p for p in result.problems)
+
+    def test_expect_fail_with_match_is_admitted(self, tmp_path: Path) -> None:
+        assert gate.check_item(write_item(tmp_path)).state == "READY"
+
+    def test_expect_pass_without_match_is_still_admitted(self, tmp_path: Path) -> None:
+        tasks = GOOD_TASKS.replace('      match: "1 passed"\n', "")
+        assert gate.check_item(write_item(tmp_path, **{"tasks.md": tasks})).state == (
+            "READY"
+        )
+
+    def test_the_shipped_template_carries_match_on_its_red_task(self) -> None:
+        template = Path(__file__).parent.parent / "templates" / "handoff" / "tasks.md"
+        data = gate.parse_frontmatter(template.read_text())
+        red = [t for t in data["tasks"] if t["evidence"]["expect"] == "fail"]
+        assert red
+        assert all(t["evidence"].get("match") for t in red)
+
+
+class TestWorkDestroyingGitCommandsAreRefused:
+    """Each git spelling that discards work or deletes a ref is refused.
+
+    `rm -r` without `-f` stays admitted: it is the brief's line, and
+    the task files it could touch are already bounded by allow_paths.
+    """
+
+    @pytest.mark.parametrize(
+        "command",
+        [
+            "git clean -f",
+            "git clean -fd",
+            "git clean -fdx",
+            "git clean -xf",
+            "git clean --force -d",
+            "git checkout -- src/app.py",
+            "git checkout .",
+            "git checkout -f main",
+            "git checkout --force main",
+            "git checkout main -- .",
+            "git restore src/app.py",
+            "git restore --worktree src/app.py",
+            "git restore --staged --worktree src/app.py",
+            "git restore -SW src/app.py",
+            "git push --mirror origin",
+            "git push --delete origin feature",
+            "git push -d origin feature",
+            "git push --prune origin",
+            "git push origin :feature",
+            "git stash drop",
+            "git stash clear",
+            "git branch -D feature",
+            "git branch --delete --force feature",
+            "git branch -d -f feature",
+            "git branch -df feature",
+            "git checkout -B main",
+            "git branch -M old main",
+            "git branch -C old main",
+            "git branch -m -f old main",
+            "git branch --move --force old main",
+            "git --config-env=alias.p=PUSHF p",
+            "git --config-env core.hooksPath=HOOKS commit -m x",
+        ],
+    )
+    def test_a_work_destroying_command_is_refused(
+        self, tmp_path: Path, command: str
+    ) -> None:
+        handoff = GOOD_HANDOFF.replace(
+            "test: uv run pytest tests/ -q", f"test: {command}"
+        )
+        result = gate.check_item(write_item(tmp_path, **{"handoff.md": handoff}))
+        assert result.state == "UNSAFE", command
+        assert any("bypasses a quality gate" in p for p in result.problems)
+
+    @pytest.mark.parametrize(
+        "command",
+        [
+            "git checkout -b feature",
+            "git checkout main",
+            "git restore --staged src/app.py",
+            "git restore -S src/app.py",
+            "git push origin main",
+            "git push origin main:main",
+            "git clean -n",
+            "git clean -nd",
+            "git branch -d merged",
+            "git branch -m old new",
+            "git stash",
+            "git stash list",
+            "git --config-env=user.name=GIT_NAME status",
+            "rm -r build",
+        ],
+    )
+    def test_an_ordinary_git_command_is_admitted(
+        self, tmp_path: Path, command: str
+    ) -> None:
+        handoff = GOOD_HANDOFF.replace(
+            "test: uv run pytest tests/ -q", f"test: {command}"
+        )
+        result = gate.check_item(write_item(tmp_path, **{"handoff.md": handoff}))
+        assert result.state == "READY", (command, result.problems)

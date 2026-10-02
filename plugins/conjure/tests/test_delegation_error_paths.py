@@ -11,7 +11,6 @@ import json
 import logging
 import subprocess
 import time
-from dataclasses import replace
 from datetime import datetime
 from pathlib import Path
 from unittest.mock import MagicMock, patch
@@ -427,40 +426,6 @@ class TestAResultCannotAnswerAndReportExhaustion:
         assert result.fallback_reason is None
 
 
-class TestTheModelFlagComesFromTheServiceConfig:
-    """`--model` was the one flag hardcoded past ServiceConfig.
-
-    The comment two lines above the call claimed every flag spelling
-    comes from the config. It is not even universal: `ollama run --help`
-    (0.13.1) documents `ollama run MODEL [PROMPT]` and lists no
-    `--model`, so passing one to glimmer exits 1 on an unknown flag.
-    """
-
-    def test_glimmer_takes_its_model_positionally(self) -> None:
-        """Ollama run has no --model; the model rides the subcommand."""
-        command = Delegator().build_command("glimmer", "hi", None, {"model": "x"})
-        assert "--model" not in command
-        assert "muse-glimmer:30b" in command
-
-    def test_a_provider_with_the_flag_still_receives_it(self) -> None:
-        """Broadening the rule must not drop the flag where it is real."""
-        command = Delegator().build_command(
-            "minimax", "hi", None, {"model": "MiniMax-M3"}
-        )
-        assert "--model" in command
-        assert command[command.index("--model") + 1] == "MiniMax-M3"
-
-    def test_the_spelling_is_data_not_a_branch(self) -> None:
-        """Changing the config changes the argv, with no code change."""
-        delegator = Delegator()
-        delegator.services["minimax"] = replace(
-            delegator.services["minimax"], model_flag="--llm"
-        )
-        command = delegator.build_command("minimax", "hi", None, {"model": "m"})
-        assert "--llm" in command
-        assert "--model" not in command
-
-
 class TestTheAuditTrailAndTheOverridesAreNotSilent:
     """Two failures that returned or logged at a level nobody reads."""
 
@@ -492,89 +457,3 @@ class TestTheAuditTrailAndTheOverridesAreNotSilent:
             delegator.log_usage("gemini", ["gemini"], result)
 
         assert any("audit trail" in r.message for r in caplog.records)
-
-
-class TestVerifyAnswersCanThisProviderTakeWork:
-    """`--verify` reported OK for two providers that cannot serve a call.
-
-    Both were found by running the real binaries. qwen 0.4.0 prints
-    "[API Error: 401 Incorrect API key provided...]" and exits 0, and
-    its delegation envelope reports `is_error: false` over the same
-    text, so the exit code is not a signal for that CLI. glimmer probes
-    `ollama --version`, which answers whenever ollama is installed and
-    says nothing about whether the model was ever pulled.
-    """
-
-    def test_a_probe_that_exits_zero_over_a_rejection_is_not_authenticated(
-        self, tmp_path
-    ) -> None:
-        """The exit code is not a signal for a CLI that prints its 401."""
-        delegator = Delegator(config_dir=tmp_path)
-        service = replace(
-            delegator.services["qwen"],
-            auth_method="cli",
-            auth_probe=("auth", "status"),
-            auth_files=(),
-            auth_env_var=None,
-            env={},
-        )
-        delegator.services["qwen"] = service
-
-        rejected = subprocess.CompletedProcess(
-            args=[],
-            returncode=0,
-            stdout="[API Error: 401 Incorrect API key]",
-            stderr="",
-        )
-        with patch("subprocess.run", return_value=rejected):
-            ok, issues = delegator.verify_service("qwen")
-
-        assert not ok
-        assert any("exited 0" in issue for issue in issues)
-
-    def test_a_clean_probe_still_verifies(self, tmp_path) -> None:
-        """The marker must not condemn a provider that is actually fine."""
-        delegator = Delegator(config_dir=tmp_path)
-        delegator.services["qwen"] = replace(
-            delegator.services["qwen"],
-            auth_method="cli",
-            auth_probe=("auth", "status"),
-            auth_files=(),
-            auth_env_var=None,
-            env={},
-        )
-
-        good = subprocess.CompletedProcess(
-            args=[], returncode=0, stdout="Logged in as someone", stderr=""
-        )
-        with patch("subprocess.run", return_value=good):
-            ok, issues = delegator.verify_service("qwen")
-
-        assert ok, issues
-
-    def test_an_unpulled_model_is_not_a_ready_provider(self, tmp_path) -> None:
-        """An installed runtime is not a served model."""
-        delegator = Delegator(config_dir=tmp_path)
-        empty_list = subprocess.CompletedProcess(
-            args=[], returncode=0, stdout="NAME  ID  SIZE  MODIFIED\n", stderr=""
-        )
-        with patch("subprocess.run", return_value=empty_list):
-            ok, issues = delegator.verify_service("glimmer")
-
-        assert not ok
-        assert any("muse-glimmer:30b" in issue for issue in issues)
-        assert any("ollama pull" in issue for issue in issues)
-
-    def test_a_pulled_model_verifies(self, tmp_path) -> None:
-        """The probe must not condemn a provider that is ready."""
-        delegator = Delegator(config_dir=tmp_path)
-        listed = subprocess.CompletedProcess(
-            args=[],
-            returncode=0,
-            stdout="NAME              ID    SIZE\nmuse-glimmer:30b  abc   19 GB\n",
-            stderr="",
-        )
-        with patch("subprocess.run", return_value=listed):
-            ok, issues = delegator.verify_service("glimmer")
-
-        assert ok, issues

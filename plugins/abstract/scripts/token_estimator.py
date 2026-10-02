@@ -267,7 +267,7 @@ class TokenEstimatorCLI(AbstractCLI, PathArgumentMixin):
                     args.include_dependencies,
                 )
                 results = [result]
-            except Exception as e:
+            except (FileNotFoundError, OSError, ValueError) as e:
                 return CLIResult(success=False, error=str(e))
         else:  # directory
             all_results = self.estimator.analyze_directory(

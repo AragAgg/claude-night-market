@@ -88,7 +88,7 @@ module names across plugins force the per-plugin split.
 **Grand total**: 20,992.
 
 Counts are `pytest --collect-only` output on 2026-08-25, not
-estimates. They drift, so re-measure before quoting them:
+estimates. They drift. Re-measure before quoting them:
 
 ```bash
 for p in plugins/*/; do
@@ -228,9 +228,9 @@ tests:
 
 ```bash
 $ ./scripts/run-plugin-tests.sh broken-plugin
-Testing broken-plugin...
-  ✗ Tests failed
-Re-running with verbose output:
+[INFO]  Testing broken-plugin...
+[INFO]    ✗ Tests failed
+[INFO]  Re-running with verbose output:
 [Full pytest output with error details]
 ```
 

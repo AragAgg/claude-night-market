@@ -68,9 +68,9 @@ the failure mode worth catching.
 Full rubric, table, and worked example:
 `Skill(scribe:slop-detector)` module `document-economy.md`.
 
-Audience fit is judgment, not a string in the text, so no
-regex can decide it and nothing is added to `en.yaml` for
-it. The guard is the contract test
+Audience fit is judgment that no string in the text reveals.
+No regex can decide it, and nothing is added to `en.yaml`
+for it. The guard is the contract test
 `plugins/scribe/tests/test_audience_targeting.py`.
 
 ## Layer 2: Sentence-level checks
@@ -87,7 +87,7 @@ uv run --with pyyaml python scripts/slop_score.py --audit <files>
 It takes files or directories, reports every category with a
 file and a line, and exits 0. It carries what the merge gate
 declines to score: the low-confidence categories
-(`semicolon_splice`, the softer anthropomorphism verbs) and the
+(the softer anthropomorphism verbs) and the
 opt-in ones (`negative_definition`, `contrastive_scaffold`,
 `over_explanation`), plus the per-document negation-density
 reading. Those are surfaced for a person to judge and are
@@ -96,12 +96,12 @@ one.
 
 `--python` adds `.py` files to a directory sweep and scores their
 comments and docstrings, which is where half of this behavior lives. A
-`.py` path named directly is always read that way, so a caller passing
-a file list needs no flag.
+caller passing a file list needs no flag: a `.py` path named directly is
+always read that way.
 
 A Python score is floored at 150 words, because under that the number
 measures its denominator. The score is weighted hits per 100 words and
-a tier 1 hit is worth 3, so a module with 14 words of docstring and one
+a tier 1 hit is worth 3. A module with 14 words of docstring and one
 finding scored 21.43 against 1.55 for a 1029-word ADR carrying twelve.
 150 is the lowest floor at which every surviving file in a six-plugin
 sweep carries at least three findings. The floor gates only: `--audit`
@@ -118,7 +118,7 @@ Notation is the shape to leave alone, and it is code that happens to
 sit in prose: an arrow in a mapping table
 (`memory_palace/corpus/integration_policy.py:28`), a plus in a formula
 (`scribe/tape_generator.py:220`), and a character quoted because the
-code matches it (`scribe/negation.py:34`). Code marked the RST way,
+code matches it (`scribe/negation.py:37`). Code marked the RST way,
 with two backticks, is stripped before scoring.
 
 `scripts/slop_score.py --threshold 3.0 docs book/src` is the
@@ -144,10 +144,22 @@ unavailable.
    end-of-options separator and is not punctuation.
 2b. Prose semicolon splices. A semicolon joining two
    independent clauses reads more naturally as two sentences or
-   one coordinating conjunction. Rephrase rather than swapping
-   in an em dash, which is usually what the semicolon replaced.
+   joined by "and" or "but". Rephrase rather than swapping in an
+   em dash, which is usually what the semicolon replaced, or a
+   ", so" tail (2c).
+   Since 2026-09-18 the unambiguous splice (no comma on either
+   side, lowercase continuation) is scored at high confidence.
    A list whose items carry internal commas is the one durable
-   keep. Confidence is low, so a person judges each hit.
+   keep, and the pattern does not match it.
+2c. Consequence tails. "The index was stale, so the lookup
+   missed" appends a consequence with a comma and "so". One is
+   ordinary English. A page that explains every fact this way
+   reads as generated. First ask whether the reader needs the
+   consequence at all, and delete it when they do not. Otherwise
+   give it its own sentence, lead with the cause, or name the
+   mechanism. `tier5.so_connective` marks each tail at medium
+   confidence, and `--audit` reports a density above 2.0 per
+   1000 words.
 3. Scan for tier 1 slop: "structured", "comprehensive",
    "actionable", "seamless", "robust", "myriad",
    "empower", "navigate" (as metaphor)
@@ -212,9 +224,13 @@ modesty.
   rewrite the sentence (fine in code, math, version strings,
   and diagram labels)
 - Replace a prose semicolon splice with a period (two
-  sentences) or a coordinating conjunction ("and", "but",
-  "so"). Keep the semicolon only when removing it creates
-  ambiguity, such as a list whose items carry internal commas
+  sentences) or "and" / "but". Keep the semicolon only when
+  removing it creates ambiguity, such as a list whose items
+  carry internal commas
+- Question every ", so" tail before rewording it. Delete a
+  consequence the reader can infer. Give a needed one its own
+  sentence, lead with the cause ("Because the index was stale,
+  the lookup missed"), or name the mechanism that links the two
 - Strip "Let's", "We'll", "In this guide" framings. Start
   the sentence at the substantive content
 - Replace hedging seesaw with a position
@@ -237,9 +253,9 @@ list above.
 **These are not repo-local rules.** Every category below is
 implemented as a `tier5.*` section in
 `plugins/scribe/data/languages/en.yaml`, which is the pattern
-source `Skill(scribe:slop-detector)` loads at runtime. A
-document scanned in any other codebase gets the same findings,
-so remediation is portable rather than tied to this repository.
+source `Skill(scribe:slop-detector)` loads at runtime.
+Remediation is portable rather than tied to this repository: a
+document scanned in any other codebase gets the same findings.
 The list below is the human-readable rationale and the rewrite
 guidance. The YAML is the enforcement. When adding a pattern
 here, add it there too, with a test in
@@ -252,10 +268,10 @@ ever apply to this repo.
   "boasts", "marks" (a turning point), "represents" (a shift)
   with plain "is", "has", "uses", or delete. Heuristic: if
   the subject cannot literally do the verb, the verb is slop.
-  The bare and plural forms are already matched: the regex uses
-  `lives?`, `sits?`, `stands?`, `rests?`, `dwells?`, so "the
-  configs live in the repo root" and "adapters sit between the
-  layers" fire the same as the inflected forms. No separate
+  The regex uses `lives?`, `sits?`, `stands?`, `rests?`,
+  `dwells?`, which already matches the bare and plural forms:
+  "the configs live in the repo root" and "adapters sit between
+  the layers" fire the same as the inflected forms. No separate
   pattern is needed for them.
 - **Anthropomorphism (non-human subjects)**: the spatial copula
   bullet covers putting a body somewhere. This covers giving code,
@@ -299,10 +315,14 @@ ever apply to this repo.
   confidence, and the reason is worth keeping: no source in the
   contrastive-negation literature names either connective, and this
   repository writes "rather than" 504 times and "instead of" 299,
-  almost all correctly, these rule files included. Scoped to the
-  verb-phrase form, so a noun comparison ("use rg rather than grep")
-  stays untouched. Enable it for a documentation audit, surface every
-  hit, never auto-rewrite.
+  almost all correctly, these rule files included. The pattern is
+  scoped to the verb-phrase form and leaves a noun comparison ("use rg
+  rather than grep") untouched. Enable it for a documentation audit,
+  surface every hit, never auto-rewrite. The negated form is different and is
+  scored: `negated_alternative` matches a negation followed in the
+  same clause by either connective ("never guesses instead of
+  measuring", "does not retry rather than report"). A recommendation
+  ("use rg rather than grep") has no negation and does not match.
 - **Negative framing**: three shapes and a measure, all in
   `tier5`. **Litotes** (`not uncommon`, `not unlike`, `never fails
   to`, `not without merit`) says a positive thing through two
@@ -350,7 +370,7 @@ ever apply to this repo.
   BLOCKED work to be stated. A blanket rule against saying what was
   not done contradicts the harness and loses to it, which is what the
   practitioner reports behind this category describe. A file has no
-  session to report on, so the rule applies to written artifacts and
+  session to report on. The rule applies to written artifacts and
   stops there. Same resolution `ste-for-operator-and-procedures.md`
   performs for sentence length: by scope, not by precedence.
 
@@ -406,9 +426,10 @@ ever apply to this repo.
   with `"` and `'`/`'` with `'` in technical prose.
 - **Semicolon splice**: a semicolon joining two independent
   clauses ("The system is fast; it scales") is a sophistication
-  marker. Split into two sentences or join with "and"/"but"/
-  "so". Keep the semicolon only when a list's items carry
-  internal commas. Low confidence: surface, do not auto-rewrite.
+  marker. Split into two sentences or join with "and" or
+  "but". Keep the semicolon only when a list's items carry
+  internal commas. The splice with no comma on either side is
+  scored. A comma-bearing list is not matched at all.
 - **Over-explained fixes**: narration wrapped around a change,
   in place of the change. "In order to", "this ensures that",
   "this means that", "the reason for this is", "which allows
@@ -422,6 +443,17 @@ ever apply to this repo.
   changelogs, commit bodies, and PR descriptions. The judgment
   half belongs to document economy's sentence-weight check.
   This is the lexical half.
+- **Consequence tail (", so")**: "X, so Y" and "X, so that Y"
+  attach a consequence to every fact. Commit bodies here went
+  from none per 1000 words in January 2026 to 8.9 in September,
+  and the book holds 0.18. Rewrite in this order: delete the
+  consequence when the reader can infer it, split it into its
+  own sentence, lead with the cause, or name the mechanism.
+  "So that" stating a purpose takes no comma and is not
+  matched. `tier5.so_connective` is medium confidence and never
+  scored. `scribe.connectives.check_so_density` reports a page
+  above 2.0 per 1000 words through `--audit`. Detail:
+  `Skill(scribe:slop-detector)` module `structural-patterns.md`.
 - **Loop/cascade vocabulary**: replace "unpack" (verb,
   metaphor) with "explain"; "surface" (verb, metaphor) with
   "raise" or "report"; "a quiet shift" with the named shift;

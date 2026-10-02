@@ -1,7 +1,7 @@
 """Pre-commit gate hook for the gauntlet plugin.
 
 Reads hook input from stdin (JSON), checks for a pass token, and either
-allows the commit or denies it with a challenge prompt.
+steps aside for the commit or denies it with a challenge prompt.
 """
 
 from __future__ import annotations
@@ -334,7 +334,13 @@ def _graph_risk_context(gauntlet_dir: Path) -> str | None:
         # would let the commit through the gate that exists to stop it.
         report = _analyze(graph, base_ref="HEAD", timeout=_GIT_TIMEOUT_SECONDS)
         graph.close()
-    except Exception:
+    except Exception as exc:
+        # The warning is advisory: report the failure, never block the commit.
+        print(
+            f"[gauntlet-precommit-gate] blast radius skipped: "
+            f"{type(exc).__name__}: {exc}",
+            file=sys.stderr,
+        )
         return None
 
     overall = report.get("overall_risk", "none")
@@ -390,12 +396,9 @@ def main(hook_input: dict[str, Any]) -> dict[str, Any] | None:
 
     staged_hash = _get_staged_hash()
     if check_pass_token(gauntlet_dir, staged_hash):
-        return {
-            "hookSpecificOutput": {
-                "hookEventName": "PreToolUse",
-                "permissionDecision": "allow",
-            }
-        }
+        # A passed challenge lifts this gate; it does not approve the
+        # commit, which stays subject to the user's permission settings.
+        return None
 
     # Graph-aware checks (non-blocking, adds context)
     risk_context = _graph_risk_context(gauntlet_dir)

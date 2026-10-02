@@ -47,9 +47,9 @@ defects in the resume path, all of them invisible to the test suite:
 | Stop hook blocked every stop, with no bound | 10 turns and roughly $0.70 for a one-word prompt, on Opus | `9f31a878` |
 
 The third is the one this record is about. Blocking was conditioned on
-a static fact, that the manifest holds active work, so a session with
-no way to advance the pipeline was handed the prompt back on every
-stop until something else intervened.
+a static fact, that the manifest holds active work. A session with no
+way to advance the pipeline was handed the prompt back on every stop
+until something else intervened.
 
 ## Alternatives considered
 
@@ -94,9 +94,9 @@ Three things stay true and should not be discovered again the hard
 way:
 
 - **The product is not bounded.** A watchdog tick that finds a dead
-  session relaunches into a fresh stall budget, so an item stuck
-  without manifest writes costs about three turns per relaunch for as
-  long as the timer runs. Bounding one relaunch does not bound their
+  session relaunches into a fresh stall budget. An item stuck without
+  manifest writes costs about three turns per relaunch for as long as
+  the timer runs. Bounding one relaunch does not bound their
   product. The escape hatch is
   `systemctl --user disable --now egregore-watchdog.timer`.
 - **Progress is defined as manifest bytes.** A session that writes the
@@ -129,7 +129,7 @@ Any one of these retires it:
 - Upstream documents a continuation primitive that survives a session
   ending, at an interval a step loop can use. Egregore moves to it and
   the Stop hook goes back to gating stops.
-- The `claude --bg` supervisor is adopted and carries continuation, so
-  the night-run E2E passes with the egregore Stop hook disabled.
+- The `claude --bg` supervisor is adopted and carries continuation,
+  and the night-run E2E passes with the egregore Stop hook disabled.
 - Upstream changes the semantics and the loop breaks, in which case
   this record is the starting point rather than a rediscovery.

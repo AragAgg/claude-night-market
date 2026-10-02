@@ -28,8 +28,8 @@ Bram Cohen (BitTorrent) reinforces from the
 > I frequently have to throw away their massively verbose and
 > ridiculously complex code.
 
-The code lacks a theory the maintainer can reconstruct quickly,
-so replacement is cheaper than repair.
+Without a theory the maintainer can reconstruct quickly,
+replacement is cheaper than repair.
 
 Karpathy Principles 1-4 prevent the model from writing bad code.
 Theory-building is about whether the *human* still understands

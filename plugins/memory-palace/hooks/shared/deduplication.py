@@ -47,6 +47,10 @@ except ImportError:
 # Index cache
 _index_cache: dict[str, Any] | None = None
 _index_mtime: float = 0
+# True while the cached index stands in for a file that failed to parse.
+# update_index reads it to set that file aside before writing.
+_index_load_failed = False
+_warned_no_yaml = False
 
 # Ceiling on the staging call. `git add` on one file is milliseconds;
 # anything near this bound is a lock being held, and a capture waits for
@@ -108,9 +112,41 @@ def get_url_key(url: str) -> str:
     return url.lower()
 
 
+def _warn_no_yaml_once() -> None:
+    """Tell the operator once per process that captures are not persisted."""
+    global _warned_no_yaml  # noqa: PLW0603 - once-per-process latch
+    if not _warned_no_yaml:
+        _warned_no_yaml = True
+        print(
+            "[memory-palace] WARNING: PyYAML is not installed; dedup "
+            "persistence is off and the capture index is neither read nor "
+            "written.",
+            file=sys.stderr,
+        )
+
+
+def _set_aside_corrupt_index(index_path: Path) -> None:
+    """Rename an unparsable index to a timestamped sibling and say where.
+
+    Renaming rather than refusing the write keeps captures persisting,
+    and keeps the unreadable bytes for a person to repair or merge.
+    """
+    stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    target = index_path.with_name(f"{index_path.name}.corrupt-{stamp}")
+    os.replace(index_path, target)
+    print(
+        f"[memory-palace] WARNING: moved unparsable index to {target}; "
+        f"starting a fresh index at {index_path}.",
+        file=sys.stderr,
+    )
+
+
 def _load_index() -> dict[str, Any]:
     """Load index from disk with caching."""
-    global _index_cache, _index_mtime  # noqa: PLW0603 - module-level cache requires global for mtime-based invalidation
+    global _index_cache, _index_mtime, _index_load_failed  # noqa: PLW0603 - module-level cache requires global for mtime-based invalidation
+
+    if yaml is None:
+        _warn_no_yaml_once()
 
     index_path = _get_index_path()
 
@@ -124,19 +160,22 @@ def _load_index() -> dict[str, Any]:
             _index_cache = {"entries": {}, "hashes": {}}
             return _index_cache
 
+        _index_load_failed = False
         try:
             with open(index_path) as f:
                 _index_cache = yaml.safe_load(f) or {"entries": {}, "hashes": {}}
         except yaml.YAMLError as exc:
             # Issue #528: a corrupt index file must not take down web-research
-            # store calls. Log to stderr so the operator notices, then fall
-            # back to the empty-index sentinel.
+            # store calls. Reads proceed on an empty index and leave the file
+            # alone. The next update_index moves the file aside before writing,
+            # so the unparsable entries are never overwritten.
             print(
                 f"[memory-palace] WARNING: corrupt YAML index at "
-                f"{index_path}: {exc}; falling back to empty index. "
-                f"Repair or delete the file to restore persistence.",
+                f"{index_path}: {exc}; using an empty index. The next "
+                f"capture moves the file to a .corrupt-<timestamp> sibling.",
                 file=sys.stderr,
             )
+            _index_load_failed = True
             _index_cache = {"entries": {}, "hashes": {}}
             _index_mtime = current_mtime
             return _index_cache
@@ -149,6 +188,7 @@ def _load_index() -> dict[str, Any]:
         return _index_cache
 
     except FileNotFoundError:
+        _index_load_failed = False
         _index_cache = {"entries": {}, "hashes": {}}
         return _index_cache
 
@@ -282,7 +322,7 @@ def update_index(  # noqa: PLR0913 - index entries have many metadata fields
             f"importance_score must be in [0, 100], got {importance_score}"
         )
 
-    global _index_cache  # noqa: PLW0603 - invalidate module-level cache after disk write
+    global _index_cache, _index_mtime, _index_load_failed  # noqa: PLW0603 - invalidate module-level cache after disk write
 
     index = _load_index()
     now = datetime.now(timezone.utc).isoformat()
@@ -328,11 +368,15 @@ def update_index(  # noqa: PLR0913 - index entries have many metadata fields
     # Atomic write back using tempfile + rename
     if yaml is None:
         # Cannot persist without yaml - cache only
+        _warn_no_yaml_once()
         _index_cache = index
         return
 
     index_path = _get_index_path()
     index_path.parent.mkdir(parents=True, exist_ok=True)
+    if _index_load_failed:
+        _set_aside_corrupt_index(index_path)
+        _index_load_failed = False
 
     # Write to temp file in same directory (validates same filesystem for atomic rename)
     fd, tmp_path = tempfile.mkstemp(

@@ -10,6 +10,9 @@ nothing, the module says it does not know rather than guessing.
 
 from __future__ import annotations
 
+import os
+import time
+from collections.abc import Iterator
 from datetime import datetime, timedelta, timezone
 
 import pytest
@@ -17,6 +20,25 @@ import window
 from budget import Budget, is_in_cooldown
 
 NOW = datetime(2026, 8, 23, 3, 0, 0, tzinfo=timezone.utc)
+
+
+@pytest.fixture
+def local_tz(request: pytest.FixtureRequest) -> Iterator[None]:
+    """Pin the process time zone, restoring it and the C library after.
+
+    ``cron_for`` formats local time, so its expected strings depend on
+    the zone. ``time.tzset`` must run on both sides: restoring ``TZ``
+    alone leaves the C library in the pinned zone.
+    """
+    previous = os.environ.get("TZ")
+    os.environ["TZ"] = getattr(request, "param", "UTC")
+    time.tzset()
+    yield
+    if previous is None:
+        del os.environ["TZ"]
+    else:
+        os.environ["TZ"] = previous
+    time.tzset()
 
 
 class TestClassify:
@@ -115,6 +137,7 @@ class TestRecordAgainstBudget:
         assert budget.cooldown_until == expected.isoformat()
 
 
+@pytest.mark.usefixtures("local_tz")
 class TestResumeSchedule:
     """Turning a reset instant into something a scheduler can fire on."""
 
@@ -130,6 +153,21 @@ class TestResumeSchedule:
     def test_grace_can_roll_the_hour(self) -> None:
         reset = datetime(2026, 8, 23, 5, 59, tzinfo=timezone.utc)
         assert window.cron_for(reset, grace_minutes=2) == "1 6 23 8 *"
+
+    @pytest.mark.parametrize("local_tz", ["America/Chicago"], indirect=True)
+    def test_the_cron_is_in_local_time(self) -> None:
+        """CronCreate reads its expression in the user's local zone.
+
+        05:30 UTC on 23 August is 00:30 CDT, so a UTC-formatted string
+        would fire five hours late.
+        """
+        reset = datetime(2026, 8, 23, 5, 30, tzinfo=timezone.utc)
+        assert window.cron_for(reset) == "30 0 23 8 *"
+
+    @pytest.mark.parametrize("local_tz", ["America/Chicago"], indirect=True)
+    def test_local_time_can_roll_the_day_back(self) -> None:
+        reset = datetime(2026, 8, 23, 2, 0, tzinfo=timezone.utc)
+        assert window.cron_for(reset) == "0 21 22 8 *"
 
 
 class TestUnattendedEnvironment:

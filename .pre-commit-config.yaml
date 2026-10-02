@@ -33,7 +33,9 @@ repos:
         name: Verify Inlined JSON Utilities Match Canonical
         entry: bash scripts/shared/check-json-utils-drift.sh
         language: system
-        files: (scripts/shared/json_utils\.sh|plugins/(imbue|conserve)/hooks/session-start\.sh)$
+        # The vendored copies are at hooks/shared/json_utils.sh. The script
+        # is listed so a change to what it compares re-runs it.
+        files: ^(scripts/shared/(json_utils|check-json-utils-drift)\.sh|plugins/[^/]+/hooks/shared/json_utils\.sh)$
         pass_filenames: false
         stages: [pre-commit]
 
@@ -80,10 +82,14 @@ repos:
       # determine changed files via 'git diff --cached' internally.
       # The 'files:' pattern only controls WHEN the hook triggers.
       - id: run-plugin-typecheck
-        name: Type Check All Plugins (strict)
-        entry: ./scripts/run-plugin-typecheck.sh --all
+        name: Type Check Changed Plugins (strict)
+        # --changed checks the plugins with staged files, and every plugin
+        # when the root pyproject.toml or a shared config/make include is
+        # staged. typecheck.yml gates the full set on every pull request;
+        # this hook checks what the commit can break.
+        entry: ./scripts/run-plugin-typecheck.sh --changed
         language: system
-        pass_filenames: false  # Script checks every plugin internally
+        pass_filenames: false  # Script reads the staged set itself
         stages: [pre-commit]
         # pyproject.toml as well as .py. A plugin's pyproject is what decides
         # whether mypy exists in its environment and which config it runs
@@ -97,7 +103,7 @@ repos:
         # hook's outcome exactly like a pyproject does. A UV_PYTHON name
         # collision in common.mk broke every make-based plugin while this
         # hook stayed silent, because .mk matched nothing here.
-        files: ^(plugins/.*(\.py|/pyproject\.toml|/Makefile)|plugins/abstract/config/make/.*\.mk|scripts/run-plugin-typecheck\.sh)$
+        files: ^(plugins/.*(\.py|/pyproject\.toml|/Makefile)|plugins/abstract/config/make/.*\.mk|pyproject\.toml|scripts/run-plugin-typecheck\.sh)$
         verbose: true
 
       - id: run-plugin-tests
@@ -126,14 +132,14 @@ repos:
 
       - id: validate-skill-descriptions
         name: Validate Skill Descriptions
-        entry: python3 scripts/fix_descriptions.py --check
+        entry: uv run --with pyyaml python scripts/fix_descriptions.py --check
         language: system
         files: SKILL\.md$
         pass_filenames: false
 
       - id: validate-abstract-skills
         name: Validate Abstract Skills
-        entry: python3 plugins/abstract/scripts/abstract_validator.py
+        entry: uv run --with pyyaml python plugins/abstract/scripts/abstract_validator.py
         language: system
         files: ^plugins/abstract/.*SKILL\.md$
         pass_filenames: false
@@ -147,142 +153,18 @@ repos:
         pass_filenames: false
         args: ["--root", "plugins/imbue", "--scan"]
 
-      - id: validate-abstract-plugin
-        name: Validate Abstract Plugin Structure
-        entry: python3 plugins/abstract/scripts/validate_plugin.py plugins/abstract
+      # One hook for every plugin. The plugin set comes from the staged
+      # paths, so a new plugin is validated without an edit here.
+      - id: validate-plugins
+        name: Validate Plugin Structure
+        entry: python3 scripts/validate_staged_plugins.py
         language: system
-        files: ^plugins/abstract/
-        pass_filenames: false
-
-      - id: validate-imbue-plugin
-        name: Validate Imbue Plugin Structure
-        entry: python3 plugins/abstract/scripts/validate_plugin.py plugins/imbue
-        language: system
-        files: ^plugins/imbue/
-        pass_filenames: false
-
-      - id: validate-archetypes-plugin
-        name: Validate Archetypes Plugin Structure
-        entry: python3 plugins/abstract/scripts/validate_plugin.py plugins/archetypes
-        language: system
-        files: ^plugins/archetypes/
-        pass_filenames: false
-
-      - id: validate-conjure-plugin
-        name: Validate Conjure Plugin Structure
-        entry: python3 plugins/abstract/scripts/validate_plugin.py plugins/conjure
-        language: system
-        files: ^plugins/conjure/
-        pass_filenames: false
-
-      - id: validate-conserve-plugin
-        name: Validate Conserve Plugin Structure
-        entry: python3 plugins/abstract/scripts/validate_plugin.py plugins/conserve
-        language: system
-        files: ^plugins/conserve/
-        pass_filenames: false
-
-      - id: validate-attune-plugin
-        name: Validate Attune Plugin Structure
-        entry: python3 plugins/abstract/scripts/validate_plugin.py plugins/attune
-        language: system
-        files: ^plugins/attune/
-        pass_filenames: false
-
-      - id: validate-memory-palace-plugin
-        name: Validate Memory Palace Plugin Structure
-        entry: python3 plugins/abstract/scripts/validate_plugin.py plugins/memory-palace
-        language: system
-        files: ^plugins/memory-palace/
-        pass_filenames: false
-
-      - id: validate-egregore-plugin
-        name: Validate Egregore Plugin Structure
-        entry: python3 plugins/abstract/scripts/validate_plugin.py plugins/egregore
-        language: system
-        files: ^plugins/egregore/
-        pass_filenames: false
-
-      - id: validate-hookify-plugin
-        name: Validate Hookify Plugin Structure
-        entry: python3 plugins/abstract/scripts/validate_plugin.py plugins/hookify
-        language: system
-        files: ^plugins/hookify/
-        pass_filenames: false
-
-      - id: validate-leyline-plugin
-        name: Validate Leyline Plugin Structure
-        entry: python3 plugins/abstract/scripts/validate_plugin.py plugins/leyline
-        language: system
-        files: ^plugins/leyline/
-        pass_filenames: false
-
-      - id: validate-minister-plugin
-        name: Validate Minister Plugin Structure
-        entry: python3 plugins/abstract/scripts/validate_plugin.py plugins/minister
-        language: system
-        files: ^plugins/minister/
-        pass_filenames: false
-
-      - id: validate-parseltongue-plugin
-        name: Validate Parseltongue Plugin Structure
-        entry: python3 plugins/abstract/scripts/validate_plugin.py plugins/parseltongue
-        language: system
-        files: ^plugins/parseltongue/
-        pass_filenames: false
-
-      - id: validate-pensive-plugin
-        name: Validate Pensive Plugin Structure
-        entry: python3 plugins/abstract/scripts/validate_plugin.py plugins/pensive
-        language: system
-        files: ^plugins/pensive/
-        pass_filenames: false
-
-      - id: validate-phantom-plugin
-        name: Validate Phantom Plugin Structure
-        entry: python3 plugins/abstract/scripts/validate_plugin.py plugins/phantom
-        language: system
-        files: ^plugins/phantom/
-        pass_filenames: false
-
-      - id: validate-sanctum-plugin
-        name: Validate Sanctum Plugin Structure
-        entry: python3 plugins/abstract/scripts/validate_plugin.py plugins/sanctum
-        language: system
-        files: ^plugins/sanctum/
-        pass_filenames: false
-
-      - id: validate-scribe-plugin
-        name: Validate Scribe Plugin Structure
-        entry: python3 plugins/abstract/scripts/validate_plugin.py plugins/scribe
-        language: system
-        files: ^plugins/scribe/
-        pass_filenames: false
-
-      - id: validate-scry-plugin
-        name: Validate Scry Plugin Structure
-        entry: python3 plugins/abstract/scripts/validate_plugin.py plugins/scry
-        language: system
-        files: ^plugins/scry/
-        pass_filenames: false
-
-      - id: validate-spec-kit-plugin
-        name: Validate Spec-Kit Plugin Structure
-        entry: python3 plugins/abstract/scripts/validate_plugin.py plugins/spec-kit
-        language: system
-        files: ^plugins/spec-kit/
-        pass_filenames: false
-
-      - id: validate-tome-plugin
-        name: Validate Tome Plugin Structure
-        entry: python3 plugins/abstract/scripts/validate_plugin.py plugins/tome
-        language: system
-        files: ^plugins/tome/
-        pass_filenames: false
+        files: ^plugins/[^/]+/
+        require_serial: true
 
       - id: validate-knowledge-corpus
         name: Validate Knowledge Corpus Frontmatter
-        entry: python3 plugins/memory-palace/scripts/validate_knowledge_corpus.py
+        entry: uv run --with pyyaml python plugins/memory-palace/scripts/validate_knowledge_corpus.py
         language: system
         files: ^plugins/memory-palace/docs/knowledge-corpus/.*\.md$
         pass_filenames: false
@@ -297,7 +179,7 @@ repos:
 
       - id: check-context-optimization
         name: Check Context Optimization
-        entry: python3 plugins/abstract/scripts/context_optimizer.py stats plugins/
+        entry: uv run --with pyyaml python plugins/abstract/scripts/context_optimizer.py stats plugins/
         language: system
         files: ^.*SKILL\.md$
         pass_filenames: false

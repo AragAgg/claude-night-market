@@ -21,10 +21,7 @@ from typing import Any, cast
 
 from scripts.delegation_prompt import (
     MAX_INLINE_CONTEXT_BYTES,
-    _compose_prompt_with_files,
     _delivered_prompt,
-    _inline_context,
-    _iter_context_files,
     _prompt_argv,
     estimate_tokens,
 )
@@ -35,9 +32,6 @@ from scripts.delegation_services import (
     VERIFIED_BINARIES,
     ServiceConfig,
     _apply_overrides,
-    _env_satisfies,
-    _expired_credentials,
-    _has_credential_file,
     _missing_required_fields,
     _smart_delegate_model,
     credential_file_issues,
@@ -46,11 +40,8 @@ from scripts.delegation_services import (
 )
 from scripts.delegation_verify import verify_service
 
-# Names that moved to delegation_services and delegation_prompt. Only the
-# tests still import them from here: delegation_setup imports them from
-# delegation_services directly, and egregore's single reference is a
-# subprocess path string rather than an import. Re-exported so the test
-# suite keeps one import site, not because three consumers depend on it.
+# Public names only. A private helper is imported from the module that
+# defines it, so a new caller cannot come to depend on this module for it.
 __all__ = [
     "MAX_INLINE_CONTEXT_BYTES",
     "VERIFIED_BINARIES",
@@ -58,14 +49,6 @@ __all__ = [
     "ExecutionResult",
     "LaunchSpec",
     "ServiceConfig",
-    "_compose_prompt_with_files",
-    "_delivered_prompt",
-    "_env_satisfies",
-    "_expired_credentials",
-    "_has_credential_file",
-    "_inline_context",
-    "_iter_context_files",
-    "_missing_required_fields",
     "credential_file_issues",
     "credential_issues",
     "estimate_tokens",

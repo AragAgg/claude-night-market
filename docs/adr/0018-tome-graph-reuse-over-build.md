@@ -31,8 +31,8 @@ construction, no heavy ML in the hot path.
 Two amendments came out of the war-room review and are binding:
 
 1. memory-palace promotes `KnowledgeGraph` and `PalaceGraphAnalyzer`
-   into its public `__all__`, so tome consumes a supported API rather
-   than internals. A tome CI contract test pins that surface.
+   into its public `__all__`. Tome then consumes a supported API
+   rather than internals. A tome CI contract test pins that surface.
 2. memory-palace is a **declared dependency** of tome's graph feature,
    not a runtime silent no-op. Absence is an install-time invariant.
    If it is ever genuinely absent, tome raises an explicit
@@ -40,8 +40,8 @@ Two amendments came out of the war-room review and are binding:
    the graph layer is additive.
 
 Coupling is contained to one module, `tome/graph/palace_adapter.py`,
-rather than scattered imports, so it is a single seam that can be
-swapped or mocked.
+rather than scattered imports. That one module can be swapped or
+mocked as a unit.
 
 ## Evidence
 
@@ -55,7 +55,7 @@ The reference architecture is settled. Microsoft GraphRAG
 ([2404.16130][gr]) extracts an entity and relation graph with an LLM,
 partitions it with Leiden community detection, and answers global
 queries from community summaries. LightRAG ([2410.05779][lr]) adds
-incremental updates, so a growing arXiv corpus needs no full re-index.
+incremental updates that spare a growing arXiv corpus a full re-index.
 HippoRAG ([2405.14831][hr], NeurIPS 2024) runs Personalized PageRank
 seeded by query entities for single-shot multi-hop retrieval.
 
@@ -121,8 +121,8 @@ atypicality from z-scored reference co-occurrence. node2vec
 Raw citation metrics are biased and must be normalized, the strongest
 cross-channel warning in the study. The disruption index is biased by
 citation inflation and unsuitable for cross-time comparison
-([Petersen 2023][pet], [QSS/MIT][qss]). It depends on the
-analyst-chosen citation window, so it is tunable and gameable
+([Petersen 2023][pet], [QSS/MIT][qss]). Its dependence on the
+analyst-chosen citation window makes it tunable and gameable
 ([window][win]). It barely overlaps with novelty as a construct
 ([Triadic Novelty][triadic]). The famous small-teams-disrupt finding
 partly dissolves once inflation is corrected ([re-analysis][reana]).
